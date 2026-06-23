@@ -26,18 +26,6 @@ registerEnumType(PublicEventLookupCodeEnum, {
 });
 
 @ObjectType()
-export class PublicEventLookup {
-  @Field(() => PublicEventLookupCodeEnum)
-  public code!: PublicEventLookupCodeEnum;
-
-  @Field(() => EventType, { nullable: true })
-  public event?: EventType;
-
-  @Field(() => EventStatusEnum, { nullable: true })
-  public status?: EventStatus;
-}
-
-@ObjectType()
 export class EventType {
   @Field(() => ID)
   public id!: string;
@@ -82,6 +70,18 @@ export class EventType {
 
   @Field(() => String)
   public updatedAt!: string;
+}
+
+@ObjectType()
+export class PublicEventLookup {
+  @Field(() => PublicEventLookupCodeEnum)
+  public code!: PublicEventLookupCodeEnum;
+
+  @Field(() => EventType, { nullable: true })
+  public event?: EventType;
+
+  @Field(() => EventStatusEnum, { nullable: true })
+  public status?: EventStatus;
 }
 
 @ObjectType()
