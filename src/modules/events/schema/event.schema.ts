@@ -3,10 +3,10 @@ import { Field, ID, InputType, Int, ObjectType, registerEnumType } from "type-gr
 import { EVENT_STATUSES, type EventStatus } from "../interfaces/event.types.js";
 
 export enum EventStatusEnum {
-  DRAFT = "draft",
-  PUBLISHED = "published",
-  COMPLETED = "completed",
-  CANCELLED = "cancelled"
+  draft = "draft",
+  published = "published",
+  completed = "completed",
+  cancelled = "cancelled"
 }
 
 registerEnumType(EventStatusEnum, {
