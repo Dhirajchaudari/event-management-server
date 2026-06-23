@@ -43,7 +43,7 @@ jobs:
             git reset --hard "origin/$BRANCH"
 
             if [ -n "${SERVER_ENV_B64:-}" ]; then
-              echo "$SERVER_ENV_B64" | base64 -d > .env.production
+              printf '%s' "$SERVER_ENV_B64" | tr -d '\n\r ' | base64 -d > .env.production
               chmod 600 .env.production
               sed -i 's/\r$//' .env.production
             fi
