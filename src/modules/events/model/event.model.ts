@@ -1,8 +1,9 @@
-import { getModelForClass, modelOptions, prop } from "@typegoose/typegoose";
-import type { Types } from "mongoose";
+import { getModelForClass, index, modelOptions, prop } from "@typegoose/typegoose";
+import { Schema, type Types } from "mongoose";
 
 import type { EventStatus } from "../interfaces/event.types.js";
 
+@index({ slug: 1 }, { unique: true, sparse: true })
 @modelOptions({
   schemaOptions: {
     timestamps: true,
@@ -14,6 +15,12 @@ export class Event {
 
   @prop({ required: true, trim: true, type: () => String })
   public name!: string;
+
+  @prop({ trim: true, type: () => String })
+  public slug?: string;
+
+  @prop({ type: () => Schema.Types.ObjectId })
+  public organizerId?: Types.ObjectId;
 
   @prop({ required: true, type: () => Date })
   public date!: Date;
@@ -29,7 +36,7 @@ export class Event {
 
   @prop({
     required: true,
-    enum: ["draft", "published", "live", "completed"],
+    enum: ["pending_approval", "draft", "published", "live", "completed"],
     default: "draft",
     type: () => String
   })

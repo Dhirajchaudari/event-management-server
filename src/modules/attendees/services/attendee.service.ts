@@ -2,9 +2,10 @@ import type { DocumentType } from "@typegoose/typegoose";
 import { Types } from "mongoose";
 
 import { EventModel } from "../../events/model/event.model.js";
-import { EventNotFoundError } from "../../events/services/event.service.js";
+import { EventNotFoundError, EventService } from "../../events/services/event.service.js";
 import type { Attendee } from "../model/attendee.model.js";
 import { AttendeeModel } from "../model/attendee.model.js";
+import type { EventType } from "../../events/schema/event.schema.js";
 import type { AttendeeType } from "../schema/attendee.schema.js";
 import {
   validateAttendeeId,
@@ -99,14 +100,15 @@ export class AttendeeService {
     eventId: string,
     name: string,
     email: string,
-    specialty?: string | null
+    specialty?: string | null,
+    userId?: string | null
   ): Promise<AttendeeType> {
     const validation = validateRsvpInput({ eventId, name, email, specialty });
     if (!validation.ok) {
       throw new Error(validation.message);
     }
 
-    return this.rsvp(validation.data);
+    return this.rsvp(validation.data, userId);
   }
 
   public async cancelById(attendeeId: string): Promise<boolean> {
@@ -128,7 +130,27 @@ export class AttendeeService {
     await AttendeeModel.deleteMany({ eventId: new Types.ObjectId(eventId) }).exec();
   }
 
-  private async rsvp(input: ValidatedRsvpInput): Promise<AttendeeType> {
+  public async listRegisteredEventsForUser(email: string): Promise<EventType[]> {
+    const attendees = await AttendeeModel.find({ email: email.trim().toLowerCase() })
+      .sort({ rsvpAt: -1 })
+      .exec();
+
+    if (attendees.length === 0) {
+      return [];
+    }
+
+    const eventIds = [...new Set(attendees.map((attendee) => attendee.eventId.toString()))];
+    const events = await EventModel.find({
+      _id: { $in: eventIds.map((id) => new Types.ObjectId(id)) }
+    })
+      .sort({ date: 1 })
+      .exec();
+
+    const eventService = new EventService();
+    return Promise.all(events.map((event) => eventService.toEventType(event)));
+  }
+
+  private async rsvp(input: ValidatedRsvpInput, userId?: string | null): Promise<AttendeeType> {
     const event = await EventModel.findById(input.eventId).exec();
     if (!event) {
       throw new EventNotFoundError();
@@ -146,6 +168,7 @@ export class AttendeeService {
     try {
       const attendee = await AttendeeModel.create({
         eventId: new Types.ObjectId(input.eventId),
+        userId: userId ? new Types.ObjectId(userId) : undefined,
         name: input.name,
         email: input.email,
         specialty: input.specialty,

@@ -1,4 +1,7 @@
-import { STATUS_LIFECYCLE, type EventStatus } from "../interfaces/event.types.js";
+import {
+  STATUS_LIFECYCLE,
+  type EventStatus
+} from "../interfaces/event.types.js";
 
 export class InvalidStatusTransitionError extends Error {
   constructor(from: EventStatus, to: EventStatus) {
@@ -8,6 +11,10 @@ export class InvalidStatusTransitionError extends Error {
 }
 
 export function getNextStatus(current: EventStatus): EventStatus | null {
+  if (current === "pending_approval") {
+    return null;
+  }
+
   const index = STATUS_LIFECYCLE.indexOf(current);
   if (index === -1 || index >= STATUS_LIFECYCLE.length - 1) {
     return null;
@@ -20,8 +27,20 @@ export function assertValidStatusTransition(from: EventStatus, to: EventStatus):
     return;
   }
 
+  if (from === "pending_approval") {
+    throw new InvalidStatusTransitionError(from, to);
+  }
+
   const next = getNextStatus(from);
   if (next !== to) {
     throw new InvalidStatusTransitionError(from, to);
   }
+}
+
+export function assertAdminApprovalTransition(from: EventStatus, to: EventStatus): void {
+  if (from === "pending_approval" && (to === "published" || to === "draft")) {
+    return;
+  }
+
+  assertValidStatusTransition(from, to);
 }

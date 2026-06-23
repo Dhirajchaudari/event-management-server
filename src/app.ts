@@ -13,6 +13,7 @@ import { AUTH_SESSION_COOKIE } from "./modules/auth/auth.constants.js";
 import { AuthResolver, resolveSessionUserFromCookie } from "./modules/auth/resolvers/auth.resolver.js";
 import { AttendeeResolver } from "./modules/attendees/resolvers/attendee.resolver.js";
 import { EventResolver } from "./modules/events/resolvers/event.resolver.js";
+import { EventService } from "./modules/events/services/event.service.js";
 import { registerUploadRoutes } from "./modules/uploads/routes/upload.routes.js";
 import type Context from "./types/context.type.js";
 
@@ -98,6 +99,16 @@ export function buildApp(): FastifyInstance {
     app.addHook("onReady", async () => {
       try {
         await connectMongo();
+        const eventService = new EventService();
+        const backfilled = await eventService.backfillAllEventSlugs();
+        if (backfilled > 0) {
+          app.log.info({ backfilled }, "Backfilled missing event slugs");
+        }
+
+        const normalized = await eventService.normalizeAllEventSlugs();
+        if (normalized > 0) {
+          app.log.info({ normalized }, "Normalized event slugs to name-based URLs");
+        }
         app.log.info("MongoDB connection verified");
       } catch (error) {
         app.log.error({ err: error }, "MongoDB connection failed at startup");

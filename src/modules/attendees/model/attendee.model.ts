@@ -14,6 +14,9 @@ export class Attendee {
   @prop({ required: true, type: () => Schema.Types.ObjectId })
   public eventId!: Types.ObjectId;
 
+  @prop({ type: () => Schema.Types.ObjectId })
+  public userId?: Types.ObjectId;
+
   @prop({ required: true, trim: true, type: () => String })
   public name!: string;
 

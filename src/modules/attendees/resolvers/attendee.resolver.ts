@@ -1,6 +1,9 @@
-import { Arg, ID, Mutation, Query, Resolver, UseMiddleware } from "type-graphql";
+import { Arg, Ctx, ID, Mutation, Query, Resolver, UseMiddleware } from "type-graphql";
 
 import { isAuthenticated } from "../../../middlewares/authentication.js";
+import { isAttendeeRole } from "../../auth/interfaces/auth.types.js";
+import type Context from "../../../types/context.type.js";
+import { EventType } from "../../events/schema/event.schema.js";
 import { AttendeeType } from "../schema/attendee.schema.js";
 import {
   AttendeeNotFoundError,
@@ -25,15 +28,27 @@ export class AttendeeResolver {
     return attendeeService.listForEvent(eventId);
   }
 
+  @Query(() => [EventType])
+  @UseMiddleware(isAuthenticated)
+  public async myRegisteredEvents(@Ctx() context: Context): Promise<EventType[]> {
+    if (!context.sessionUser || !isAttendeeRole(context.sessionUser.role)) {
+      throw new Error("FORBIDDEN");
+    }
+
+    return attendeeService.listRegisteredEventsForUser(context.sessionUser.email);
+  }
+
   @Mutation(() => AttendeeType)
   public async rsvpToEvent(
     @Arg("eventId", () => ID) eventId: string,
     @Arg("name", () => String) name: string,
     @Arg("email", () => String) email: string,
-    @Arg("specialty", () => String, { nullable: true }) specialty?: string
+    @Arg("specialty", () => String, { nullable: true }) specialty?: string,
+    @Ctx() context?: Context
   ): Promise<AttendeeType> {
     try {
-      return await attendeeService.rsvpFromInput(eventId, name, email, specialty);
+      const userId = context?.sessionUser?.id;
+      return await attendeeService.rsvpFromInput(eventId, name, email, specialty, userId);
     } catch (error) {
       if (error instanceof EventNotFoundError) {
         throw new Error("Event not found");

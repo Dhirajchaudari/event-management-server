@@ -4,7 +4,7 @@ import { getEnvConfig } from "../../../config/env.js";
 import { signSessionToken } from "../../../utils/jwt.util.js";
 import type { SessionUser, UserRole } from "../interfaces/auth.types.js";
 import { UserModel } from "../model/user.model.js";
-import type { LoginInput, RegisterInput } from "../schema/auth.schema.js";
+import type { LoginInput, RegisterInput, ChangePasswordInput } from "../schema/auth.schema.js";
 import { validateEmail, validatePassword, validateRegisterInput } from "../validation/auth.validation.js";
 
 export class AuthService {
@@ -21,7 +21,7 @@ export class AuthService {
     }
 
     try {
-      return await this.register(validation.email, validation.password, input.role ?? "user");
+      return await this.register(validation.email, validation.password, input.role ?? "organizer");
     } catch (error) {
       if (error instanceof Error && error.message === "EMAIL_ALREADY_EXISTS") {
         throw new Error("Email is already registered");
@@ -55,7 +55,11 @@ export class AuthService {
     return signSessionToken(user);
   }
 
-  public async register(email: string, password: string, role: UserRole = "user"): Promise<SessionUser> {
+  public async register(email: string, password: string, role: UserRole = "organizer"): Promise<SessionUser> {
+    if (role === "admin") {
+      throw new Error("Admin accounts cannot be created via registration");
+    }
+
     const existing = await UserModel.findOne({ email }).exec();
     if (existing) {
       throw new Error("EMAIL_ALREADY_EXISTS");
@@ -91,6 +95,41 @@ export class AuthService {
       return null;
     }
     return this.toSessionUser(user);
+  }
+
+  public async changePasswordWithInput(input: ChangePasswordInput): Promise<boolean> {
+    const emailResult = validateEmail(input.email);
+    if (!emailResult.ok) {
+      throw new Error(emailResult.message);
+    }
+
+    const currentPasswordResult = validatePassword(input.currentPassword, this.passwordMinLength);
+    if (!currentPasswordResult.ok) {
+      throw new Error("Current password is required");
+    }
+
+    const newPasswordResult = validatePassword(input.newPassword, this.passwordMinLength);
+    if (!newPasswordResult.ok) {
+      throw new Error(newPasswordResult.message);
+    }
+
+    if (input.currentPassword === input.newPassword) {
+      throw new Error("New password must be different from the current password");
+    }
+
+    const user = await UserModel.findOne({ email: emailResult.value }).exec();
+    if (!user) {
+      throw new Error("Invalid email or current password");
+    }
+
+    const matches = await compare(input.currentPassword, user.passwordHash);
+    if (!matches) {
+      throw new Error("Invalid email or current password");
+    }
+
+    user.passwordHash = await hash(input.newPassword, 10);
+    await user.save();
+    return true;
   }
 
   private toSessionUser(user: { _id: { toString(): string }; email: string; role: UserRole }): SessionUser {

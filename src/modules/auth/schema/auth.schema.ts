@@ -48,3 +48,15 @@ export class LoginInput {
   @Field(() => String)
   public password!: string;
 }
+
+@InputType()
+export class ChangePasswordInput {
+  @Field(() => String)
+  public email!: string;
+
+  @Field(() => String)
+  public currentPassword!: string;
+
+  @Field(() => String)
+  public newPassword!: string;
+}

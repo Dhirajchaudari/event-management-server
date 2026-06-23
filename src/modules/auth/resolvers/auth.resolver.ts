@@ -7,7 +7,7 @@ import type Context from "../../../types/context.type.js";
 import { verifySessionToken } from "../../../utils/jwt.util.js";
 import { AUTH_SESSION_COOKIE } from "../auth.constants.js";
 import type { SessionUser } from "../interfaces/auth.types.js";
-import { LoginInput, RegisterInput, SessionUserType } from "../schema/auth.schema.js";
+import { LoginInput, RegisterInput, SessionUserType, ChangePasswordInput } from "../schema/auth.schema.js";
 import { AuthService } from "../services/auth.service.js";
 
 const authService = new AuthService();
@@ -63,6 +63,13 @@ export class AuthResolver {
     const token = await authService.issueSessionToken(user);
     setAuthCookie(getReply(context), token);
     return user;
+  }
+
+  @Mutation(() => Boolean)
+  public async changePassword(
+    @Arg("input", () => ChangePasswordInput) input: ChangePasswordInput
+  ): Promise<boolean> {
+    return authService.changePasswordWithInput(input);
   }
 
   @Mutation(() => Boolean)

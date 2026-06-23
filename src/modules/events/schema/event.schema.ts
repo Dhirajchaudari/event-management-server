@@ -3,6 +3,7 @@ import { Field, ID, InputType, ObjectType, registerEnumType } from "type-graphql
 import { EVENT_STATUSES, type EventStatus } from "../interfaces/event.types.js";
 
 export enum EventStatusEnum {
+  pending_approval = "pending_approval",
   draft = "draft",
   published = "published",
   live = "live",
@@ -13,6 +14,29 @@ registerEnumType(EventStatusEnum, {
   name: "EventStatus"
 });
 
+export enum PublicEventLookupCodeEnum {
+  OK = "OK",
+  NOT_FOUND = "NOT_FOUND",
+  NOT_PUBLISHED = "NOT_PUBLISHED",
+  PENDING_APPROVAL = "PENDING_APPROVAL"
+}
+
+registerEnumType(PublicEventLookupCodeEnum, {
+  name: "PublicEventLookupCode"
+});
+
+@ObjectType()
+export class PublicEventLookup {
+  @Field(() => PublicEventLookupCodeEnum)
+  public code!: PublicEventLookupCodeEnum;
+
+  @Field(() => EventType, { nullable: true })
+  public event?: EventType;
+
+  @Field(() => EventStatusEnum, { nullable: true })
+  public status?: EventStatus;
+}
+
 @ObjectType()
 export class EventType {
   @Field(() => ID)
@@ -20,6 +44,12 @@ export class EventType {
 
   @Field(() => String)
   public name!: string;
+
+  @Field(() => String)
+  public slug!: string;
+
+  @Field(() => ID, { nullable: true })
+  public organizerId?: string;
 
   @Field(() => String)
   public date!: string;
@@ -49,6 +79,18 @@ export class EventType {
 
   @Field(() => String)
   public createdAt!: string;
+
+  @Field(() => String)
+  public updatedAt!: string;
+}
+
+@ObjectType()
+export class PublicEventSitemapEntry {
+  @Field(() => String)
+  public slug!: string;
+
+  @Field(() => String)
+  public name!: string;
 
   @Field(() => String)
   public updatedAt!: string;

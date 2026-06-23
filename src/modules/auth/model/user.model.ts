@@ -18,7 +18,7 @@ export class User {
   @prop({ required: true, type: () => String })
   public passwordHash!: string;
 
-  @prop({ required: true, enum: ["admin", "user"], default: "user", type: () => String })
+  @prop({ required: true, enum: ["admin", "organizer", "attendee", "user"], default: "organizer", type: () => String })
   public role!: UserRole;
 
   public createdAt?: Date;
