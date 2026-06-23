@@ -113,16 +113,30 @@ export class EventService {
   }
 
   public async update(id: string, input: ValidatedUpdateEventInput): Promise<EventType> {
-    const update: Partial<Event> = {};
-    if (input.name !== undefined) update.name = input.name;
-    if (input.speakerName !== undefined) update.speakerName = input.speakerName;
-    if (input.speakerDesignation !== undefined) update.speakerDesignation = input.speakerDesignation;
-    if (input.date !== undefined) update.date = new Date(input.date);
-    if ("speakerPhotoUrl" in input) update.speakerPhotoUrl = input.speakerPhotoUrl;
-    if (input.status !== undefined) update.status = input.status;
-    if (input.attendeeCount !== undefined) update.attendeeCount = input.attendeeCount;
+    const setUpdate: Partial<Event> = {};
+    const fieldsToUnset: string[] = [];
 
-    const event = await EventModel.findByIdAndUpdate(id, update, {
+    if (input.name !== undefined) setUpdate.name = input.name;
+    if (input.speakerName !== undefined) setUpdate.speakerName = input.speakerName;
+    if (input.speakerDesignation !== undefined) setUpdate.speakerDesignation = input.speakerDesignation;
+    if (input.date !== undefined) setUpdate.date = new Date(input.date);
+    if (input.status !== undefined) setUpdate.status = input.status;
+    if (input.attendeeCount !== undefined) setUpdate.attendeeCount = input.attendeeCount;
+
+    if ("speakerPhotoUrl" in input) {
+      if (input.speakerPhotoUrl === undefined) {
+        fieldsToUnset.push("speakerPhotoUrl");
+      } else {
+        setUpdate.speakerPhotoUrl = input.speakerPhotoUrl;
+      }
+    }
+
+    const mongoUpdate: Record<string, unknown> = { ...setUpdate };
+    if (fieldsToUnset.length > 0) {
+      mongoUpdate.$unset = Object.fromEntries(fieldsToUnset.map((field) => [field, 1]));
+    }
+
+    const event = await EventModel.findByIdAndUpdate(id, mongoUpdate, {
       new: true,
       runValidators: true
     }).exec();
