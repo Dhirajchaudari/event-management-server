@@ -13,10 +13,36 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      SERVER_ENV_B64: ${{ secrets.SERVER_ENV_B64 }}
       SERVER_PUBLIC_HEALTH_URL: ${{ vars.SERVER_PUBLIC_HEALTH_URL }}
       SERVER_DEPLOY_BASE: ${{ vars.SERVER_DEPLOY_BASE }}
     steps:
+      - name: Decode production env on runner
+        env:
+          SERVER_ENV_B64: ${{ secrets.SERVER_ENV_B64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SERVER_ENV_B64:-}" ]; then
+            echo "ERROR: SERVER_ENV_B64 secret is empty" >&2
+            exit 1
+          fi
+          printf '%s' "$SERVER_ENV_B64" | tr -d '\n\r \t' | base64 -d > .env.production
+          chmod 600 .env.production
+          if ! grep -q '^MONGODB_URI=' .env.production; then
+            echo "ERROR: decoded .env.production is missing MONGODB_URI" >&2
+            exit 1
+          fi
+          echo "Decoded .env.production successfully"
+
+      - name: Copy env file to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_VM_HOST }}
+          username: ${{ secrets.DEV_VM_USER }}
+          key: ${{ secrets.DEV_VM_SSH_PRIVATE_KEY }}
+          source: ".env.production"
+          target: "${{ vars.SERVER_DEPLOY_BASE }}/"
+          overwrite: true
+
       - name: Deploy backend over SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -25,11 +51,11 @@ jobs:
           key: ${{ secrets.DEV_VM_SSH_PRIVATE_KEY }}
           command_timeout: 30m
           request_pty: true
-          envs: SERVER_ENV_B64,SERVER_PUBLIC_HEALTH_URL,SERVER_DEPLOY_BASE
+          envs: SERVER_PUBLIC_HEALTH_URL,SERVER_DEPLOY_BASE
           script_stop: false
           script: |
             set -euo pipefail
-            BASE="${SERVER_DEPLOY_BASE:-/home/ubuntu/apps/event-management/server}"
+            BASE="${SERVER_DEPLOY_BASE:-/home/dhirajchaudhari789/apps/event-management/server}"
             mkdir -p "$BASE"
             cd "$BASE"
 
@@ -42,11 +68,11 @@ jobs:
             git checkout "$BRANCH"
             git reset --hard "origin/$BRANCH"
 
-            if [ -n "${SERVER_ENV_B64:-}" ]; then
-              printf '%s' "$SERVER_ENV_B64" | tr -d '\n\r ' | base64 -d > .env.production
-              chmod 600 .env.production
-              sed -i 's/\r$//' .env.production
+            if [ ! -f .env.production ]; then
+              echo "ERROR: .env.production not found after SCP" >&2
+              exit 1
             fi
+            chmod 600 .env.production
 
             : "${SERVER_PUBLIC_HEALTH_URL:=https://api-events.orbitalops.net/health}"
             export EM_ENV_FILE=.env.production
