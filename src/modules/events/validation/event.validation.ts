@@ -17,6 +17,8 @@ export interface ValidatedUpdateEventInput {
   speakerDesignation?: string;
   speakerPhotoUrl?: string;
   attendeeCount?: number;
+  aiDescription?: string;
+  aiSpeakerIntro?: string;
 }
 
 const REQUIRED_FIELDS = ["name", "date", "speakerName", "speakerDesignation"] as const;
@@ -90,6 +92,20 @@ export function validateUpdateInput(
       return { ok: false, message: attendeeCount.error };
     }
     data.attendeeCount = attendeeCount.value;
+  }
+
+  if (input.aiDescription !== undefined) {
+    if (typeof input.aiDescription !== "string") {
+      return { ok: false, message: "aiDescription must be a string" };
+    }
+    data.aiDescription = input.aiDescription.trim();
+  }
+
+  if (input.aiSpeakerIntro !== undefined) {
+    if (typeof input.aiSpeakerIntro !== "string") {
+      return { ok: false, message: "aiSpeakerIntro must be a string" };
+    }
+    data.aiSpeakerIntro = input.aiSpeakerIntro.trim();
   }
 
   if (Object.keys(data).length === 0) {

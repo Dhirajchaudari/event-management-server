@@ -164,6 +164,22 @@ export class EventService {
       }
     }
 
+    if ("aiDescription" in input) {
+      if (!input.aiDescription) {
+        fieldsToUnset.push("aiDescription");
+      } else {
+        setUpdate.aiDescription = input.aiDescription;
+      }
+    }
+
+    if ("aiSpeakerIntro" in input) {
+      if (!input.aiSpeakerIntro) {
+        fieldsToUnset.push("aiSpeakerIntro");
+      } else {
+        setUpdate.aiSpeakerIntro = input.aiSpeakerIntro;
+      }
+    }
+
     const mongoUpdate: Record<string, unknown> = { ...setUpdate };
     if (fieldsToUnset.length > 0) {
       mongoUpdate.$unset = Object.fromEntries(fieldsToUnset.map((field) => [field, 1]));

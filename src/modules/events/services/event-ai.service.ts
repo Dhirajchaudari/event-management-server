@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const GEMINI_MODEL = "gemini-flash-latest";
+const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.0-flash", "gemini-1.5-flash"] as const;
+const RETRYABLE_STATUS_CODES = new Set([429, 503]);
 
 export interface GeneratedEventContent {
   eventDescription: string;
@@ -79,6 +80,56 @@ export function parseGeneratedEventContent(raw: string): GeneratedEventContent {
   return { eventDescription, speakerIntro };
 }
 
+function extractStatusCode(error: unknown): number | null {
+  if (!(error instanceof Error)) {
+    return null;
+  }
+
+  const match = error.message.match(/\[\s*(\d{3})\s+/);
+  return match ? Number(match[1]) : null;
+}
+
+function isRetryableGeminiError(error: unknown): boolean {
+  const status = extractStatusCode(error);
+  return status !== null && RETRYABLE_STATUS_CODES.has(status);
+}
+
+function toUserFacingGeminiError(error: unknown): EventAiGenerationError {
+  const status = extractStatusCode(error);
+
+  if (status === 503) {
+    return new EventAiGenerationError(
+      "Gemini is temporarily busy. Please try again shortly or enter the content manually."
+    );
+  }
+
+  if (status === 429) {
+    return new EventAiGenerationError(
+      "Gemini rate limit reached. Please wait a moment and try again, or enter content manually."
+    );
+  }
+
+  const message = error instanceof Error ? error.message : "Unknown AI generation error";
+  return new EventAiGenerationError(`Failed to generate event content: ${message}`);
+}
+
+async function generateWithModel(
+  apiKey: string,
+  modelName: string,
+  context: EventAiContext
+): Promise<GeneratedEventContent> {
+  const client = new GoogleGenerativeAI(apiKey);
+  const model = client.getGenerativeModel({ model: modelName });
+  const result = await model.generateContent(buildPrompt(context));
+  const text = result.response.text()?.trim();
+
+  if (!text) {
+    throw new EventAiGenerationError("Gemini returned no text content");
+  }
+
+  return parseGeneratedEventContent(text);
+}
+
 export async function generateEventContentWithGemini(
   apiKey: string,
   context: EventAiContext
@@ -89,24 +140,23 @@ export async function generateEventContentWithGemini(
     );
   }
 
-  const client = new GoogleGenerativeAI(apiKey);
-  const model = client.getGenerativeModel({ model: GEMINI_MODEL });
+  let lastError: unknown;
 
-  try {
-    const result = await model.generateContent(buildPrompt(context));
-    const text = result.response.text()?.trim();
+  for (const modelName of GEMINI_MODELS) {
+    try {
+      return await generateWithModel(apiKey, modelName, context);
+    } catch (error) {
+      if (error instanceof EventAiGenerationError && !isRetryableGeminiError(error)) {
+        throw error;
+      }
 
-    if (!text) {
-      throw new EventAiGenerationError("Gemini returned no text content");
+      lastError = error;
+
+      if (!isRetryableGeminiError(error)) {
+        break;
+      }
     }
-
-    return parseGeneratedEventContent(text);
-  } catch (error) {
-    if (error instanceof EventAiGenerationError) {
-      throw error;
-    }
-
-    const message = error instanceof Error ? error.message : "Unknown AI generation error";
-    throw new EventAiGenerationError(`Failed to generate event content: ${message}`);
   }
+
+  throw toUserFacingGeminiError(lastError);
 }

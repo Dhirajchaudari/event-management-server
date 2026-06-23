@@ -104,6 +104,12 @@ export class UpdateEventInput {
 
   @Field(() => Int, { nullable: true })
   public attendeeCount?: number;
+
+  @Field(() => String, { nullable: true })
+  public aiDescription?: string;
+
+  @Field(() => String, { nullable: true })
+  public aiSpeakerIntro?: string;
 }
 
 export { EVENT_STATUSES };
