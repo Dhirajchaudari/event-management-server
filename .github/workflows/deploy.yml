@@ -1,0 +1,66 @@
+name: Deploy backend
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-event-management-backend
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SERVER_ENV_B64: ${{ secrets.SERVER_ENV_B64 }}
+      SERVER_PUBLIC_HEALTH_URL: ${{ vars.SERVER_PUBLIC_HEALTH_URL }}
+      SERVER_DEPLOY_BASE: ${{ vars.SERVER_DEPLOY_BASE }}
+    steps:
+      - name: Deploy backend over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEV_VM_HOST }}
+          username: ${{ secrets.DEV_VM_USER }}
+          key: ${{ secrets.DEV_VM_SSH_PRIVATE_KEY }}
+          command_timeout: 30m
+          request_pty: true
+          envs: SERVER_ENV_B64,SERVER_PUBLIC_HEALTH_URL,SERVER_DEPLOY_BASE
+          script_stop: false
+          script: |
+            set -euo pipefail
+            BASE="${SERVER_DEPLOY_BASE:-/home/ubuntu/apps/event-management/server}"
+            mkdir -p "$BASE"
+            cd "$BASE"
+
+            BRANCH='${{ github.ref_name }}'
+            if [ -d .git ]; then
+              git fetch origin
+            else
+              git clone "https://github.com/${{ github.repository }}.git" .
+            fi
+            git checkout "$BRANCH"
+            git reset --hard "origin/$BRANCH"
+
+            if [ -n "${SERVER_ENV_B64:-}" ]; then
+              echo "$SERVER_ENV_B64" | base64 -d > .env.production
+              chmod 600 .env.production
+              sed -i 's/\r$//' .env.production
+            fi
+
+            : "${SERVER_PUBLIC_HEALTH_URL:=https://api-events.orbitalops.net/health}"
+            export EM_ENV_FILE=.env.production
+            export EM_PUBLIC_HEALTH_URL="$SERVER_PUBLIC_HEALTH_URL"
+            export EM_IMAGE_TAG='${{ github.sha }}'
+            export EM_BLUE_PORT=18082
+            export EM_GREEN_PORT=28082
+            export EM_APP_PORT=8000
+            export EM_BLUE_CONTAINER=event-management-api-blue
+            export EM_GREEN_CONTAINER=event-management-api-green
+            export EM_NGINX_UPSTREAM_FILE=/etc/nginx/conf.d/event-management-api-upstream.conf
+            export EM_NGINX_UPSTREAM_NAME=event_management_api_active
+            export EM_PUBLIC_HEALTH_SUCCESS_COUNT=1
+            export EM_PUBLIC_HEALTH_MAX_TIME_SECONDS=8
+            export EM_DRAIN_SECONDS=20
+
+            bash script/deploy-bluegreen.sh
