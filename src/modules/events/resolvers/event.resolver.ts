@@ -1,6 +1,7 @@
 import { Arg, Ctx, FieldResolver, ID, Int, Mutation, Query, Resolver, Root, UseMiddleware } from "type-graphql";
 
 import { isAuthenticated } from "../../../middlewares/authentication.js";
+import { AttendeeType } from "../../attendees/schema/attendee.schema.js";
 import { AttendeeService } from "../../attendees/services/attendee.service.js";
 import type Context from "../../../types/context.type.js";
 import {
@@ -26,12 +27,37 @@ export class EventResolver {
     return attendeeService.countForEvent(event.id);
   }
 
+  @FieldResolver(() => [AttendeeType])
+  @UseMiddleware(isAuthenticated)
+  public async attendees(@Root() event: EventType, @Ctx() context: Context): Promise<AttendeeType[]> {
+    const cached = context.attendeesByEventId?.get(event.id);
+    if (cached) {
+      return cached;
+    }
+    return attendeeService.listForEvent(event.id);
+  }
+
   @Query(() => [EventType])
   @UseMiddleware(isAuthenticated)
   public async events(@Ctx() context: Context): Promise<EventType[]> {
     const list = await eventService.list();
-    context.attendeeCountByEventId = await attendeeService.countByEventIds(list.map((event) => event.id));
+    const eventIds = list.map((event) => event.id);
+    context.attendeeCountByEventId = await attendeeService.countByEventIds(eventIds);
+    context.attendeesByEventId = await attendeeService.listByEventIds(eventIds);
     return list;
+  }
+
+  @Query(() => EventType, { nullable: true })
+  public async getPublicEvent(
+    @Arg("id", () => ID) id: string,
+    @Ctx() context: Context
+  ): Promise<EventType | null> {
+    const event = await eventService.findById(id);
+    if (!event) {
+      return null;
+    }
+    context.attendeeCountByEventId = await attendeeService.countByEventIds([event.id]);
+    return event;
   }
 
   @Query(() => EventType, { nullable: true })
@@ -45,6 +71,7 @@ export class EventResolver {
       return null;
     }
     context.attendeeCountByEventId = await attendeeService.countByEventIds([event.id]);
+    context.attendeesByEventId = await attendeeService.listByEventIds([event.id]);
     return event;
   }
 

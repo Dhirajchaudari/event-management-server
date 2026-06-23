@@ -26,7 +26,6 @@ export class AttendeeResolver {
   }
 
   @Mutation(() => AttendeeType)
-  @UseMiddleware(isAuthenticated)
   public async rsvpToEvent(
     @Arg("eventId", () => ID) eventId: string,
     @Arg("name", () => String) name: string,

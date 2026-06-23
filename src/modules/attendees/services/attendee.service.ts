@@ -69,6 +69,32 @@ export class AttendeeService {
     return attendees.map((attendee) => this.toAttendeeType(attendee));
   }
 
+  public async listByEventIds(eventIds: string[]): Promise<Map<string, AttendeeType[]>> {
+    if (eventIds.length === 0) {
+      return new Map();
+    }
+
+    const objectIds = eventIds.map((id) => new Types.ObjectId(id));
+    const attendees = await AttendeeModel.find({ eventId: { $in: objectIds } })
+      .sort({ rsvpAt: -1 })
+      .exec();
+
+    const grouped = new Map<string, AttendeeType[]>();
+    for (const eventId of eventIds) {
+      grouped.set(eventId, []);
+    }
+
+    for (const attendee of attendees) {
+      const eventId = attendee.eventId.toString();
+      const list = grouped.get(eventId);
+      if (list) {
+        list.push(this.toAttendeeType(attendee));
+      }
+    }
+
+    return grouped;
+  }
+
   public async rsvpFromInput(
     eventId: string,
     name: string,
