@@ -38,6 +38,15 @@ export class Event {
   @prop({ required: true, default: 0, type: () => Number })
   public attendeeCount!: number;
 
+  @prop({ trim: true, type: () => String })
+  public aiDescription?: string;
+
+  @prop({ trim: true, type: () => String })
+  public aiSpeakerIntro?: string;
+
+  @prop({ type: () => Date })
+  public aiGeneratedAt?: Date;
+
   public createdAt?: Date;
 
   public updatedAt?: Date;

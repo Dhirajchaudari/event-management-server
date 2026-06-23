@@ -39,6 +39,15 @@ export class EventType {
   @Field(() => Int)
   public attendeeCount!: number;
 
+  @Field(() => String, { nullable: true })
+  public aiDescription?: string;
+
+  @Field(() => String, { nullable: true })
+  public aiSpeakerIntro?: string;
+
+  @Field(() => String, { nullable: true })
+  public aiGeneratedAt?: string;
+
   @Field(() => String)
   public createdAt!: string;
 
@@ -65,6 +74,15 @@ export class CreateEventInput {
 
   @Field(() => Int, { nullable: true })
   public attendeeCount?: number;
+}
+
+@ObjectType()
+export class EventContent {
+  @Field(() => String)
+  public eventDescription!: string;
+
+  @Field(() => String)
+  public speakerIntro!: string;
 }
 
 @InputType()

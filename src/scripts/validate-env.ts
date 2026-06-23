@@ -9,6 +9,7 @@ try {
   console.log(`  MONGODB_URI=${env.mongodbUri.replace(/\/\/([^:]+):([^@]+)@/, "//***:***@")}`);
   console.log(`  CORS_ORIGINS=${env.corsOrigins.join(",")}`);
   console.log(`  CLOUDINARY=${env.cloudinaryCloudName ? "configured" : "missing"}`);
+  console.log(`  ANTHROPIC=${env.anthropicApiKey ? "configured" : "missing"}`);
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
   console.error(`Environment validation failed: ${message}`);

@@ -32,6 +32,7 @@ export interface EnvConfig {
   cloudinaryCloudName?: string;
   cloudinaryApiKey?: string;
   cloudinaryApiSecret?: string;
+  anthropicApiKey?: string;
 }
 
 let cachedConfig: EnvConfig | null = null;
@@ -88,7 +89,8 @@ export function getEnvConfig(): EnvConfig {
     passwordMinLength: Number(process.env.PASSWORD_MIN_LENGTH ?? "8"),
     cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME,
     cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
-    cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET
+    cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET,
+    anthropicApiKey: process.env.ANTHROPIC_API_KEY
   };
 
   if (!isTest && !hasJwtKeys) {

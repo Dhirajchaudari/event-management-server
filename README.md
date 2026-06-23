@@ -36,7 +36,7 @@ src/modules/
 | Query | `me` | Required |
 | Query | `events`, `eventById` | Required |
 | Mutation | `register`, `loginWithPassword`, `logout` | Public (except logout uses cookie) |
-| Mutation | `createEvent`, `updateEvent`, `deleteEvent` | Required |
+| Mutation | `createEvent`, `updateEvent`, `updateEventStatus`, `generateEventContent`, `deleteEvent` | Required |
 
 Cookie name: `em_auth_token` (httpOnly, RS256 JWT)
 
@@ -83,3 +83,4 @@ mutation {
 - GraphQL: `https://api-events.orbitalops.net/graphql`
 - Speaker photo upload: `POST /api/uploads/speaker-photo` (multipart `file`, auth cookie)
 - Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` in `.env.production`, regenerate `SERVER_ENV_B64`, and redeploy
+- Set `ANTHROPIC_API_KEY` for AI event content generation (`generateEventContent` mutation)

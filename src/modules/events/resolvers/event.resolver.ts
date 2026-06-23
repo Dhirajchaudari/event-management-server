@@ -3,6 +3,7 @@ import { Arg, ID, Mutation, Query, Resolver, UseMiddleware } from "type-graphql"
 import { isAuthenticated } from "../../../middlewares/authentication.js";
 import {
   CreateEventInput,
+  EventContent,
   EventStatusEnum,
   EventType,
   UpdateEventInput
@@ -47,6 +48,14 @@ export class EventResolver {
     @Arg("status", () => EventStatusEnum) status: EventStatusEnum
   ): Promise<EventType> {
     return eventService.updateStatusFromInput(eventId, status);
+  }
+
+  @Mutation(() => EventContent)
+  @UseMiddleware(isAuthenticated)
+  public async generateEventContent(
+    @Arg("eventId", () => ID) eventId: string
+  ): Promise<EventContent> {
+    return eventService.generateEventContent(eventId);
   }
 
   @Mutation(() => Boolean)

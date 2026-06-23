@@ -1,10 +1,15 @@
 import type { DocumentType } from "@typegoose/typegoose";
 
-import type { CreateEventInput, EventType, UpdateEventInput } from "../schema/event.schema.js";
+import type { CreateEventInput, EventContent, EventType, UpdateEventInput } from "../schema/event.schema.js";
 import type { EventStatus } from "../interfaces/event.types.js";
 import { EVENT_STATUSES } from "../interfaces/event.types.js";
 import type { Event } from "../model/event.model.js";
 import { EventModel } from "../model/event.model.js";
+import {
+  EventAiGenerationError,
+  generateEventContentWithClaude
+} from "./event-ai.service.js";
+import { getEnvConfig } from "../../../config/env.js";
 import {
   validateCreateInput,
   validateEventId,
@@ -107,6 +112,9 @@ export class EventService {
       speakerPhotoUrl: doc.speakerPhotoUrl,
       status,
       attendeeCount: doc.attendeeCount ?? 0,
+      aiDescription: doc.aiDescription,
+      aiSpeakerIntro: doc.aiSpeakerIntro,
+      aiGeneratedAt: doc.aiGeneratedAt?.toISOString(),
       createdAt: doc.createdAt?.toISOString() ?? new Date().toISOString(),
       updatedAt: doc.updatedAt?.toISOString() ?? new Date().toISOString()
     };
@@ -184,6 +192,44 @@ export class EventService {
     await event.save();
 
     return this.toEventType(event);
+  }
+
+  public async generateEventContent(eventId: string): Promise<EventContent> {
+    this.assertValidEventId(eventId);
+
+    const event = await EventModel.findById(eventId).exec();
+    if (!event) {
+      throw new EventNotFoundError();
+    }
+
+    const { anthropicApiKey } = getEnvConfig();
+
+    try {
+      const generated = await generateEventContentWithClaude(anthropicApiKey ?? "", {
+        name: event.name,
+        date: event.date.toISOString(),
+        speakerName: event.speakerName,
+        speakerDesignation: event.speakerDesignation
+      });
+
+      event.aiDescription = generated.eventDescription;
+      event.aiSpeakerIntro = generated.speakerIntro;
+      event.aiGeneratedAt = new Date();
+      await event.save();
+
+      return {
+        eventDescription: generated.eventDescription,
+        speakerIntro: generated.speakerIntro
+      };
+    } catch (error) {
+      if (error instanceof EventNotFoundError) {
+        throw new Error("Event not found");
+      }
+      if (error instanceof EventAiGenerationError) {
+        throw error;
+      }
+      throw new EventAiGenerationError("Failed to generate event content");
+    }
   }
 
   public async delete(id: string): Promise<boolean> {
