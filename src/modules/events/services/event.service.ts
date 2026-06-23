@@ -1,9 +1,15 @@
 import type { DocumentType } from "@typegoose/typegoose";
 
-import { EventType } from "../inputs/event.inputs.js";
+import type { CreateEventInput, EventType, UpdateEventInput } from "../schema/event.schema.js";
 import type { Event } from "../model/event.model.js";
 import { EventModel } from "../model/event.model.js";
-import type { ValidatedCreateEventInput, ValidatedUpdateEventInput } from "../validation/event.validation.js";
+import {
+  validateCreateInput,
+  validateEventId,
+  validateUpdateInput,
+  type ValidatedCreateEventInput,
+  type ValidatedUpdateEventInput
+} from "../validation/event.validation.js";
 
 export class EventNotFoundError extends Error {
   constructor() {
@@ -13,6 +19,58 @@ export class EventNotFoundError extends Error {
 }
 
 export class EventService {
+  public async createFromInput(input: CreateEventInput): Promise<EventType> {
+    const validation = validateCreateInput(input);
+    if (!validation.ok) {
+      throw new Error(validation.message);
+    }
+    return this.create(validation.data);
+  }
+
+  public async findById(id: string): Promise<EventType | null> {
+    this.assertValidEventId(id);
+
+    try {
+      return await this.getById(id);
+    } catch (error) {
+      if (error instanceof EventNotFoundError) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  public async updateFromInput(id: string, input: UpdateEventInput): Promise<EventType> {
+    this.assertValidEventId(id);
+
+    const validation = validateUpdateInput(input);
+    if (!validation.ok) {
+      throw new Error(validation.message);
+    }
+
+    try {
+      return await this.update(id, validation.data);
+    } catch (error) {
+      if (error instanceof EventNotFoundError) {
+        throw new Error("Event not found");
+      }
+      throw error;
+    }
+  }
+
+  public async deleteById(id: string): Promise<boolean> {
+    this.assertValidEventId(id);
+
+    try {
+      return await this.delete(id);
+    } catch (error) {
+      if (error instanceof EventNotFoundError) {
+        throw new Error("Event not found");
+      }
+      throw error;
+    }
+  }
+
   public toEventType(doc: DocumentType<Event>): EventType {
     return {
       id: doc._id.toString(),
@@ -72,5 +130,12 @@ export class EventService {
       throw new EventNotFoundError();
     }
     return true;
+  }
+
+  private assertValidEventId(id: string): void {
+    const idValidation = validateEventId(id);
+    if (!idValidation.ok) {
+      throw new Error(idValidation.message);
+    }
   }
 }

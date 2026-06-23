@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CreateEventInput, UpdateEventInput } from "../src/modules/events/inputs/event.inputs.js";
+import { CreateEventInput, UpdateEventInput } from "../src/modules/events/schema/event.schema.js";
 import { validateCreateInput, validateUpdateInput } from "../src/modules/events/validation/event.validation.js";
 
 describe("validateCreateInput", () => {

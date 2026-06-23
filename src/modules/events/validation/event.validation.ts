@@ -1,4 +1,4 @@
-import type { CreateEventInput, UpdateEventInput } from "../inputs/event.inputs.js";
+import type { CreateEventInput, UpdateEventInput } from "../schema/event.schema.js";
 
 export interface ValidatedCreateEventInput {
   name: string;

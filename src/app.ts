@@ -1,13 +1,16 @@
 import "reflect-metadata";
 
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
+import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import mercurius from "mercurius";
 import { buildSchemaSync } from "type-graphql";
 
 import { getEnvConfig } from "./config/env.js";
 import { checkDatabaseConnection, connectMongo, disconnectMongo } from "./db/connection.js";
-import { EventResolver } from "./modules/events/controllers/event.resolver.js";
+import { AUTH_SESSION_COOKIE } from "./modules/auth/auth.constants.js";
+import { AuthResolver, resolveSessionUserFromCookie } from "./modules/auth/resolvers/auth.resolver.js";
+import { EventResolver } from "./modules/events/resolvers/event.resolver.js";
 import type Context from "./types/context.type.js";
 
 export function buildApp(): FastifyInstance {
@@ -42,6 +45,7 @@ export function buildApp(): FastifyInstance {
   });
 
   void app.register(cors, {
+    credentials: true,
     origin: (origin, callback) => {
       if (!origin) {
         callback(null, true);
@@ -55,8 +59,10 @@ export function buildApp(): FastifyInstance {
     }
   });
 
+  void app.register(cookie);
+
   const gqlSchema = buildSchemaSync({
-    resolvers: [EventResolver],
+    resolvers: [AuthResolver, EventResolver],
     validate: false
   });
 
@@ -64,10 +70,16 @@ export function buildApp(): FastifyInstance {
     schema: gqlSchema,
     graphiql: env.nodeEnv !== "production",
     path: "/graphql",
-    context: (request: FastifyRequest, reply: FastifyReply): Context => ({
-      request,
-      reply
-    })
+    context: async (request: FastifyRequest, reply: FastifyReply): Promise<Context> => {
+      const token = request.cookies[AUTH_SESSION_COOKIE];
+      const sessionUser = await resolveSessionUserFromCookie(token);
+      return {
+        request,
+        reply,
+        appReply: reply,
+        sessionUser
+      };
+    }
   });
 
   if (env.nodeEnv !== "test") {
