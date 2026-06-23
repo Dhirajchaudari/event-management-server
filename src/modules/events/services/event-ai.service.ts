@@ -1,6 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.0-flash", "gemini-1.5-flash"] as const;
+const GEMINI_MODEL = "gemini-flash-latest";
+const MAX_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 1500;
 const RETRYABLE_STATUS_CODES = new Set([429, 503]);
 
 export interface GeneratedEventContent {
@@ -20,6 +22,12 @@ interface EventAiContext {
   date: string;
   speakerName: string;
   speakerDesignation: string;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 function formatEventDate(isoDate: string): string {
@@ -109,8 +117,9 @@ function toUserFacingGeminiError(error: unknown): EventAiGenerationError {
     );
   }
 
-  const message = error instanceof Error ? error.message : "Unknown AI generation error";
-  return new EventAiGenerationError(`Failed to generate event content: ${message}`);
+  return new EventAiGenerationError(
+    "Unable to generate content right now. Please try again or enter the content manually."
+  );
 }
 
 async function generateWithModel(
@@ -142,19 +151,21 @@ export async function generateEventContentWithGemini(
 
   let lastError: unknown;
 
-  for (const modelName of GEMINI_MODELS) {
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     try {
-      return await generateWithModel(apiKey, modelName, context);
+      return await generateWithModel(apiKey, GEMINI_MODEL, context);
     } catch (error) {
-      if (error instanceof EventAiGenerationError && !isRetryableGeminiError(error)) {
+      if (error instanceof EventAiGenerationError) {
         throw error;
       }
 
       lastError = error;
 
-      if (!isRetryableGeminiError(error)) {
+      if (!isRetryableGeminiError(error) || attempt === MAX_ATTEMPTS - 1) {
         break;
       }
+
+      await sleep(RETRY_DELAY_MS * (attempt + 1));
     }
   }
 
