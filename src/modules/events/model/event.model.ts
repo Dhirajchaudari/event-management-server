@@ -29,8 +29,8 @@ export class Event {
 
   @prop({
     required: true,
-    enum: ["draft", "published", "completed", "cancelled"],
-    default: "published",
+    enum: ["draft", "published", "live", "completed"],
+    default: "draft",
     type: () => String
   })
   public status!: EventStatus;

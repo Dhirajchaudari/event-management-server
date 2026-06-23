@@ -7,7 +7,6 @@ export interface ValidatedCreateEventInput {
   speakerName: string;
   speakerDesignation: string;
   speakerPhotoUrl?: string;
-  status?: EventStatus;
   attendeeCount?: number;
 }
 
@@ -17,7 +16,6 @@ export interface ValidatedUpdateEventInput {
   speakerName?: string;
   speakerDesignation?: string;
   speakerPhotoUrl?: string;
-  status?: EventStatus;
   attendeeCount?: number;
 }
 
@@ -45,11 +43,6 @@ export function validateCreateInput(
     return { ok: false, message: speakerPhotoUrl.error };
   }
 
-  const status = parseOptionalStatus(input.status);
-  if (status.error) {
-    return { ok: false, message: status.error };
-  }
-
   const attendeeCount = parseOptionalAttendeeCount(input.attendeeCount);
   if (attendeeCount.error) {
     return { ok: false, message: attendeeCount.error };
@@ -63,7 +56,6 @@ export function validateCreateInput(
       speakerName: input.speakerName.trim(),
       speakerDesignation: input.speakerDesignation.trim(),
       ...(speakerPhotoUrl.value !== undefined ? { speakerPhotoUrl: speakerPhotoUrl.value } : {}),
-      ...(status.value !== undefined ? { status: status.value } : {}),
       ...(attendeeCount.value !== undefined ? { attendeeCount: attendeeCount.value } : {})
     }
   };
@@ -90,14 +82,6 @@ export function validateUpdateInput(
       return { ok: false, message: speakerPhotoUrl.error };
     }
     data.speakerPhotoUrl = speakerPhotoUrl.value;
-  }
-
-  if (input.status !== undefined) {
-    const status = parseOptionalStatus(input.status);
-    if (status.error) {
-      return { ok: false, message: status.error };
-    }
-    data.status = status.value;
   }
 
   if (input.attendeeCount !== undefined) {
@@ -143,16 +127,11 @@ function parseOptionalString(
   return { value: trimmed === "" ? undefined : trimmed };
 }
 
-function parseOptionalStatus(
-  value: EventStatus | undefined
-): { value?: EventStatus; error?: string } {
-  if (value === undefined) {
-    return {};
-  }
+export function validateEventStatus(value: EventStatus): { ok: true; status: EventStatus } | { ok: false; message: string } {
   if (!EVENT_STATUSES.includes(value)) {
-    return { error: "Invalid event status" };
+    return { ok: false, message: "Invalid event status" };
   }
-  return { value };
+  return { ok: true, status: value };
 }
 
 function parseOptionalAttendeeCount(

@@ -1,15 +1,21 @@
 import type { DocumentType } from "@typegoose/typegoose";
 
 import type { CreateEventInput, EventType, UpdateEventInput } from "../schema/event.schema.js";
+import type { EventStatus } from "../interfaces/event.types.js";
+import { EVENT_STATUSES } from "../interfaces/event.types.js";
 import type { Event } from "../model/event.model.js";
 import { EventModel } from "../model/event.model.js";
 import {
   validateCreateInput,
   validateEventId,
+  validateEventStatus,
   validateUpdateInput,
   type ValidatedCreateEventInput,
   type ValidatedUpdateEventInput
 } from "../validation/event.validation.js";
+import {
+  assertValidStatusTransition
+} from "../validation/status-transition.js";
 
 export class EventNotFoundError extends Error {
   constructor() {
@@ -71,7 +77,27 @@ export class EventService {
     }
   }
 
+  public async updateStatusFromInput(eventId: string, status: EventStatus): Promise<EventType> {
+    this.assertValidEventId(eventId);
+
+    const statusValidation = validateEventStatus(status);
+    if (!statusValidation.ok) {
+      throw new Error(statusValidation.message);
+    }
+
+    try {
+      return await this.updateStatus(eventId, statusValidation.status);
+    } catch (error) {
+      if (error instanceof EventNotFoundError) {
+        throw new Error("Event not found");
+      }
+      throw error;
+    }
+  }
+
   public toEventType(doc: DocumentType<Event>): EventType {
+    const status = EVENT_STATUSES.includes(doc.status as EventStatus) ? doc.status : "draft";
+
     return {
       id: doc._id.toString(),
       name: doc.name,
@@ -79,7 +105,7 @@ export class EventService {
       speakerName: doc.speakerName,
       speakerDesignation: doc.speakerDesignation,
       speakerPhotoUrl: doc.speakerPhotoUrl,
-      status: doc.status ?? "published",
+      status,
       attendeeCount: doc.attendeeCount ?? 0,
       createdAt: doc.createdAt?.toISOString() ?? new Date().toISOString(),
       updatedAt: doc.updatedAt?.toISOString() ?? new Date().toISOString()
@@ -93,7 +119,7 @@ export class EventService {
       speakerName: input.speakerName,
       speakerDesignation: input.speakerDesignation,
       speakerPhotoUrl: input.speakerPhotoUrl,
-      status: input.status ?? "published",
+      status: "draft",
       attendeeCount: input.attendeeCount ?? 0
     });
     return this.toEventType(event);
@@ -120,7 +146,6 @@ export class EventService {
     if (input.speakerName !== undefined) setUpdate.speakerName = input.speakerName;
     if (input.speakerDesignation !== undefined) setUpdate.speakerDesignation = input.speakerDesignation;
     if (input.date !== undefined) setUpdate.date = new Date(input.date);
-    if (input.status !== undefined) setUpdate.status = input.status;
     if (input.attendeeCount !== undefined) setUpdate.attendeeCount = input.attendeeCount;
 
     if ("speakerPhotoUrl" in input) {
@@ -144,6 +169,20 @@ export class EventService {
     if (!event) {
       throw new EventNotFoundError();
     }
+    return this.toEventType(event);
+  }
+
+  public async updateStatus(id: string, status: EventStatus): Promise<EventType> {
+    const event = await EventModel.findById(id).exec();
+    if (!event) {
+      throw new EventNotFoundError();
+    }
+
+    assertValidStatusTransition(event.status, status);
+
+    event.status = status;
+    await event.save();
+
     return this.toEventType(event);
   }
 

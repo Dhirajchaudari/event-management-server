@@ -5,8 +5,8 @@ import { EVENT_STATUSES, type EventStatus } from "../interfaces/event.types.js";
 export enum EventStatusEnum {
   draft = "draft",
   published = "published",
-  completed = "completed",
-  cancelled = "cancelled"
+  live = "live",
+  completed = "completed"
 }
 
 registerEnumType(EventStatusEnum, {
@@ -63,9 +63,6 @@ export class CreateEventInput {
   @Field(() => String, { nullable: true })
   public speakerPhotoUrl?: string;
 
-  @Field(() => EventStatusEnum, { nullable: true })
-  public status?: EventStatus;
-
   @Field(() => Int, { nullable: true })
   public attendeeCount?: number;
 }
@@ -86,9 +83,6 @@ export class UpdateEventInput {
 
   @Field(() => String, { nullable: true })
   public speakerPhotoUrl?: string;
-
-  @Field(() => EventStatusEnum, { nullable: true })
-  public status?: EventStatus;
 
   @Field(() => Int, { nullable: true })
   public attendeeCount?: number;
