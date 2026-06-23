@@ -26,11 +26,11 @@ jobs:
             exit 1
           fi
           printf '%s' "$SERVER_ENV_B64" | tr -d '\n\r \t' | base64 -d > .env.production
-          chmod 600 .env.production
           if ! grep -q '^MONGODB_URI=' .env.production; then
             echo "ERROR: decoded .env.production is missing MONGODB_URI" >&2
             exit 1
           fi
+          chmod 644 .env.production
           echo "Decoded .env.production successfully"
 
       - name: Copy env file to server
