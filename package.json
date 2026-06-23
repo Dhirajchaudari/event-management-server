@@ -19,10 +19,10 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.105.0",
     "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^11.2.0",
     "@fastify/multipart": "^10.0.0",
+    "@google/generative-ai": "^0.24.1",
     "@typegoose/typegoose": "^12.20.0",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.10.0",

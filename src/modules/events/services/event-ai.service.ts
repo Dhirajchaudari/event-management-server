@@ -1,6 +1,6 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const CLAUDE_MODEL = "claude-sonnet-4-6";
+const GEMINI_MODEL = "gemini-flash-latest";
 
 export interface GeneratedEventContent {
   eventDescription: string;
@@ -57,7 +57,7 @@ export function parseGeneratedEventContent(raw: string): GeneratedEventContent {
   try {
     parsed = JSON.parse(jsonText);
   } catch {
-    throw new EventAiGenerationError("Claude returned an invalid content format");
+    throw new EventAiGenerationError("Gemini returned an invalid content format");
   }
 
   if (
@@ -66,20 +66,20 @@ export function parseGeneratedEventContent(raw: string): GeneratedEventContent {
     typeof (parsed as GeneratedEventContent).eventDescription !== "string" ||
     typeof (parsed as GeneratedEventContent).speakerIntro !== "string"
   ) {
-    throw new EventAiGenerationError("Claude response is missing required content fields");
+    throw new EventAiGenerationError("Gemini response is missing required content fields");
   }
 
   const eventDescription = (parsed as GeneratedEventContent).eventDescription.trim();
   const speakerIntro = (parsed as GeneratedEventContent).speakerIntro.trim();
 
   if (!eventDescription || !speakerIntro) {
-    throw new EventAiGenerationError("Claude returned empty content");
+    throw new EventAiGenerationError("Gemini returned empty content");
   }
 
   return { eventDescription, speakerIntro };
 }
 
-export async function generateEventContentWithClaude(
+export async function generateEventContentWithGemini(
   apiKey: string,
   context: EventAiContext
 ): Promise<GeneratedEventContent> {
@@ -87,26 +87,18 @@ export async function generateEventContentWithClaude(
     throw new EventAiGenerationError("AI content generation is not configured");
   }
 
-  const client = new Anthropic({ apiKey });
+  const client = new GoogleGenerativeAI(apiKey);
+  const model = client.getGenerativeModel({ model: GEMINI_MODEL });
 
   try {
-    const message = await client.messages.create({
-      model: CLAUDE_MODEL,
-      max_tokens: 1200,
-      messages: [
-        {
-          role: "user",
-          content: buildPrompt(context)
-        }
-      ]
-    });
+    const result = await model.generateContent(buildPrompt(context));
+    const text = result.response.text()?.trim();
 
-    const textBlock = message.content.find((block) => block.type === "text");
-    if (!textBlock || textBlock.type !== "text") {
-      throw new EventAiGenerationError("Claude returned no text content");
+    if (!text) {
+      throw new EventAiGenerationError("Gemini returned no text content");
     }
 
-    return parseGeneratedEventContent(textBlock.text);
+    return parseGeneratedEventContent(text);
   } catch (error) {
     if (error instanceof EventAiGenerationError) {
       throw error;

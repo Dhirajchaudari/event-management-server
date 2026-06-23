@@ -7,7 +7,7 @@ import type { Event } from "../model/event.model.js";
 import { EventModel } from "../model/event.model.js";
 import {
   EventAiGenerationError,
-  generateEventContentWithClaude
+  generateEventContentWithGemini
 } from "./event-ai.service.js";
 import { getEnvConfig } from "../../../config/env.js";
 import {
@@ -202,10 +202,10 @@ export class EventService {
       throw new EventNotFoundError();
     }
 
-    const { anthropicApiKey } = getEnvConfig();
+    const { geminiApiKey } = getEnvConfig();
 
     try {
-      const generated = await generateEventContentWithClaude(anthropicApiKey ?? "", {
+      const generated = await generateEventContentWithGemini(geminiApiKey ?? "", {
         name: event.name,
         date: event.date.toISOString(),
         speakerName: event.speakerName,
