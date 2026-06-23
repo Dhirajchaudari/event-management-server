@@ -78,6 +78,9 @@ export class EventService {
       date: doc.date.toISOString(),
       speakerName: doc.speakerName,
       speakerDesignation: doc.speakerDesignation,
+      speakerPhotoUrl: doc.speakerPhotoUrl,
+      status: doc.status ?? "published",
+      attendeeCount: doc.attendeeCount ?? 0,
       createdAt: doc.createdAt?.toISOString() ?? new Date().toISOString(),
       updatedAt: doc.updatedAt?.toISOString() ?? new Date().toISOString()
     };
@@ -88,7 +91,10 @@ export class EventService {
       name: input.name,
       date: new Date(input.date),
       speakerName: input.speakerName,
-      speakerDesignation: input.speakerDesignation
+      speakerDesignation: input.speakerDesignation,
+      speakerPhotoUrl: input.speakerPhotoUrl,
+      status: input.status ?? "published",
+      attendeeCount: input.attendeeCount ?? 0
     });
     return this.toEventType(event);
   }
@@ -112,6 +118,9 @@ export class EventService {
     if (input.speakerName !== undefined) update.speakerName = input.speakerName;
     if (input.speakerDesignation !== undefined) update.speakerDesignation = input.speakerDesignation;
     if (input.date !== undefined) update.date = new Date(input.date);
+    if ("speakerPhotoUrl" in input) update.speakerPhotoUrl = input.speakerPhotoUrl;
+    if (input.status !== undefined) update.status = input.status;
+    if (input.attendeeCount !== undefined) update.attendeeCount = input.attendeeCount;
 
     const event = await EventModel.findByIdAndUpdate(id, update, {
       new: true,

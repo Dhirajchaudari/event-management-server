@@ -1,4 +1,17 @@
-import { Field, ID, InputType, ObjectType } from "type-graphql";
+import { Field, ID, InputType, Int, ObjectType, registerEnumType } from "type-graphql";
+
+import { EVENT_STATUSES, type EventStatus } from "../interfaces/event.types.js";
+
+export enum EventStatusEnum {
+  DRAFT = "draft",
+  PUBLISHED = "published",
+  COMPLETED = "completed",
+  CANCELLED = "cancelled"
+}
+
+registerEnumType(EventStatusEnum, {
+  name: "EventStatus"
+});
 
 @ObjectType()
 export class EventType {
@@ -16,6 +29,15 @@ export class EventType {
 
   @Field(() => String)
   public speakerDesignation!: string;
+
+  @Field(() => String, { nullable: true })
+  public speakerPhotoUrl?: string;
+
+  @Field(() => EventStatusEnum)
+  public status!: EventStatus;
+
+  @Field(() => Int)
+  public attendeeCount!: number;
 
   @Field(() => String)
   public createdAt!: string;
@@ -37,6 +59,15 @@ export class CreateEventInput {
 
   @Field(() => String)
   public speakerDesignation!: string;
+
+  @Field(() => String, { nullable: true })
+  public speakerPhotoUrl?: string;
+
+  @Field(() => EventStatusEnum, { nullable: true })
+  public status?: EventStatus;
+
+  @Field(() => Int, { nullable: true })
+  public attendeeCount?: number;
 }
 
 @InputType()
@@ -52,4 +83,15 @@ export class UpdateEventInput {
 
   @Field(() => String, { nullable: true })
   public speakerDesignation?: string;
+
+  @Field(() => String, { nullable: true })
+  public speakerPhotoUrl?: string;
+
+  @Field(() => EventStatusEnum, { nullable: true })
+  public status?: EventStatus;
+
+  @Field(() => Int, { nullable: true })
+  public attendeeCount?: number;
 }
+
+export { EVENT_STATUSES };

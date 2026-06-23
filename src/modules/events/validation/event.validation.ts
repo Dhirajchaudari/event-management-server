@@ -1,10 +1,14 @@
 import type { CreateEventInput, UpdateEventInput } from "../schema/event.schema.js";
+import { EVENT_STATUSES, type EventStatus } from "../interfaces/event.types.js";
 
 export interface ValidatedCreateEventInput {
   name: string;
   date: string;
   speakerName: string;
   speakerDesignation: string;
+  speakerPhotoUrl?: string;
+  status?: EventStatus;
+  attendeeCount?: number;
 }
 
 export interface ValidatedUpdateEventInput {
@@ -12,6 +16,9 @@ export interface ValidatedUpdateEventInput {
   date?: string;
   speakerName?: string;
   speakerDesignation?: string;
+  speakerPhotoUrl?: string;
+  status?: EventStatus;
+  attendeeCount?: number;
 }
 
 const REQUIRED_FIELDS = ["name", "date", "speakerName", "speakerDesignation"] as const;
@@ -33,13 +40,31 @@ export function validateCreateInput(
     return { ok: false, message: parsedDate.message };
   }
 
+  const speakerPhotoUrl = parseOptionalString(input.speakerPhotoUrl);
+  if (speakerPhotoUrl.error) {
+    return { ok: false, message: speakerPhotoUrl.error };
+  }
+
+  const status = parseOptionalStatus(input.status);
+  if (status.error) {
+    return { ok: false, message: status.error };
+  }
+
+  const attendeeCount = parseOptionalAttendeeCount(input.attendeeCount);
+  if (attendeeCount.error) {
+    return { ok: false, message: attendeeCount.error };
+  }
+
   return {
     ok: true,
     data: {
       name: input.name.trim(),
       date: parsedDate.isoDate,
       speakerName: input.speakerName.trim(),
-      speakerDesignation: input.speakerDesignation.trim()
+      speakerDesignation: input.speakerDesignation.trim(),
+      ...(speakerPhotoUrl.value !== undefined ? { speakerPhotoUrl: speakerPhotoUrl.value } : {}),
+      ...(status.value !== undefined ? { status: status.value } : {}),
+      ...(attendeeCount.value !== undefined ? { attendeeCount: attendeeCount.value } : {})
     }
   };
 }
@@ -57,6 +82,30 @@ export function validateUpdateInput(
       return { ok: false, message: `Field "${field}" must be a non-empty string` };
     }
     data[field] = input[field]!.trim();
+  }
+
+  if (input.speakerPhotoUrl !== undefined) {
+    const speakerPhotoUrl = parseOptionalString(input.speakerPhotoUrl);
+    if (speakerPhotoUrl.error) {
+      return { ok: false, message: speakerPhotoUrl.error };
+    }
+    data.speakerPhotoUrl = speakerPhotoUrl.value;
+  }
+
+  if (input.status !== undefined) {
+    const status = parseOptionalStatus(input.status);
+    if (status.error) {
+      return { ok: false, message: status.error };
+    }
+    data.status = status.value;
+  }
+
+  if (input.attendeeCount !== undefined) {
+    const attendeeCount = parseOptionalAttendeeCount(input.attendeeCount);
+    if (attendeeCount.error) {
+      return { ok: false, message: attendeeCount.error };
+    }
+    data.attendeeCount = attendeeCount.value;
   }
 
   if (Object.keys(data).length === 0) {
@@ -79,6 +128,43 @@ export function validateEventId(id: string): { ok: true } | { ok: false; message
     return { ok: false, message: "Invalid event id" };
   }
   return { ok: true };
+}
+
+function parseOptionalString(
+  value: string | undefined
+): { value?: string; error?: string } {
+  if (value === undefined) {
+    return {};
+  }
+  if (typeof value !== "string") {
+    return { error: "speakerPhotoUrl must be a string" };
+  }
+  const trimmed = value.trim();
+  return { value: trimmed === "" ? undefined : trimmed };
+}
+
+function parseOptionalStatus(
+  value: EventStatus | undefined
+): { value?: EventStatus; error?: string } {
+  if (value === undefined) {
+    return {};
+  }
+  if (!EVENT_STATUSES.includes(value)) {
+    return { error: "Invalid event status" };
+  }
+  return { value };
+}
+
+function parseOptionalAttendeeCount(
+  value: number | undefined
+): { value?: number; error?: string } {
+  if (value === undefined) {
+    return {};
+  }
+  if (!Number.isInteger(value) || value < 0) {
+    return { error: "attendeeCount must be a non-negative integer" };
+  }
+  return { value };
 }
 
 function parseEventDate(value: string): { ok: true; isoDate: string } | { ok: false; message: string } {

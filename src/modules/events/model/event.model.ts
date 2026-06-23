@@ -1,6 +1,8 @@
 import { getModelForClass, modelOptions, prop } from "@typegoose/typegoose";
 import type { Types } from "mongoose";
 
+import type { EventStatus } from "../interfaces/event.types.js";
+
 @modelOptions({
   schemaOptions: {
     timestamps: true,
@@ -21,6 +23,20 @@ export class Event {
 
   @prop({ required: true, trim: true, type: () => String })
   public speakerDesignation!: string;
+
+  @prop({ trim: true, type: () => String })
+  public speakerPhotoUrl?: string;
+
+  @prop({
+    required: true,
+    enum: ["draft", "published", "completed", "cancelled"],
+    default: "published",
+    type: () => String
+  })
+  public status!: EventStatus;
+
+  @prop({ required: true, default: 0, type: () => Number })
+  public attendeeCount!: number;
 
   public createdAt?: Date;
 
