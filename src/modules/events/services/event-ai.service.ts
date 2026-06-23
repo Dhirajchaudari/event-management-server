@@ -84,7 +84,9 @@ export async function generateEventContentWithGemini(
   context: EventAiContext
 ): Promise<GeneratedEventContent> {
   if (!apiKey) {
-    throw new EventAiGenerationError("AI content generation is not configured");
+    throw new EventAiGenerationError(
+      "AI content generation is not configured. Set GEMINI_API_KEY in the server environment."
+    );
   }
 
   const client = new GoogleGenerativeAI(apiKey);

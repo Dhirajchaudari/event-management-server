@@ -89,5 +89,4 @@ jobs:
             export EM_PUBLIC_HEALTH_MAX_TIME_SECONDS=8
             export EM_DRAIN_SECONDS=20
 
-            bash script/ensure-nginx-upload-limit.sh || true
             bash script/deploy-bluegreen.sh

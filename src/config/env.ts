@@ -8,12 +8,12 @@ function loadEnvFiles(): void {
   const candidates =
     nodeEnv === "production"
       ? [".env.production", ".env"]
-      : [".env.local", ".env"];
+      : [".env.local", ".env", ".env.production"];
 
   for (const file of candidates) {
     const path = resolve(cwd, file);
     if (existsSync(path)) {
-      dotenv.config({ path });
+      dotenv.config({ path, override: false });
     }
   }
 }
