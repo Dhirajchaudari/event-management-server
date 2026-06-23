@@ -1,4 +1,7 @@
 import type { DocumentType } from "@typegoose/typegoose";
+import { Types } from "mongoose";
+
+import { AttendeeModel } from "../../attendees/model/attendee.model.js";
 
 import type { CreateEventInput, EventContent, EventType, UpdateEventInput } from "../schema/event.schema.js";
 import type { EventStatus } from "../interfaces/event.types.js";
@@ -111,7 +114,6 @@ export class EventService {
       speakerDesignation: doc.speakerDesignation,
       speakerPhotoUrl: doc.speakerPhotoUrl,
       status,
-      attendeeCount: doc.attendeeCount ?? 0,
       aiDescription: doc.aiDescription,
       aiSpeakerIntro: doc.aiSpeakerIntro,
       aiGeneratedAt: doc.aiGeneratedAt?.toISOString(),
@@ -127,8 +129,7 @@ export class EventService {
       speakerName: input.speakerName,
       speakerDesignation: input.speakerDesignation,
       speakerPhotoUrl: input.speakerPhotoUrl,
-      status: "draft",
-      attendeeCount: input.attendeeCount ?? 0
+      status: "draft"
     });
     return this.toEventType(event);
   }
@@ -154,7 +155,6 @@ export class EventService {
     if (input.speakerName !== undefined) setUpdate.speakerName = input.speakerName;
     if (input.speakerDesignation !== undefined) setUpdate.speakerDesignation = input.speakerDesignation;
     if (input.date !== undefined) setUpdate.date = new Date(input.date);
-    if (input.attendeeCount !== undefined) setUpdate.attendeeCount = input.attendeeCount;
 
     if ("speakerPhotoUrl" in input) {
       if (input.speakerPhotoUrl === undefined) {
@@ -249,6 +249,7 @@ export class EventService {
   }
 
   public async delete(id: string): Promise<boolean> {
+    await AttendeeModel.deleteMany({ eventId: new Types.ObjectId(id) }).exec();
     const event = await EventModel.findByIdAndDelete(id).exec();
     if (!event) {
       throw new EventNotFoundError();

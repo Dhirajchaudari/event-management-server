@@ -7,4 +7,5 @@ export default interface Context {
   reply: FastifyReply;
   appReply: FastifyReply;
   sessionUser: SessionUser | null;
+  attendeeCountByEventId?: Map<string, number>;
 }

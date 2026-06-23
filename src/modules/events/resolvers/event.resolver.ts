@@ -1,6 +1,8 @@
-import { Arg, ID, Mutation, Query, Resolver, UseMiddleware } from "type-graphql";
+import { Arg, Ctx, FieldResolver, ID, Int, Mutation, Query, Resolver, Root, UseMiddleware } from "type-graphql";
 
 import { isAuthenticated } from "../../../middlewares/authentication.js";
+import { AttendeeService } from "../../attendees/services/attendee.service.js";
+import type Context from "../../../types/context.type.js";
 import {
   CreateEventInput,
   EventContent,
@@ -11,19 +13,39 @@ import {
 import { EventService } from "../services/event.service.js";
 
 const eventService = new EventService();
+const attendeeService = new AttendeeService();
 
 @Resolver(() => EventType)
 export class EventResolver {
+  @FieldResolver(() => Int)
+  public async attendeeCount(@Root() event: EventType, @Ctx() context: Context): Promise<number> {
+    const cached = context.attendeeCountByEventId?.get(event.id);
+    if (cached !== undefined) {
+      return cached;
+    }
+    return attendeeService.countForEvent(event.id);
+  }
+
   @Query(() => [EventType])
   @UseMiddleware(isAuthenticated)
-  public async events(): Promise<EventType[]> {
-    return eventService.list();
+  public async events(@Ctx() context: Context): Promise<EventType[]> {
+    const list = await eventService.list();
+    context.attendeeCountByEventId = await attendeeService.countByEventIds(list.map((event) => event.id));
+    return list;
   }
 
   @Query(() => EventType, { nullable: true })
   @UseMiddleware(isAuthenticated)
-  public async eventById(@Arg("id", () => String) id: string): Promise<EventType | null> {
-    return eventService.findById(id);
+  public async eventById(
+    @Arg("id", () => String) id: string,
+    @Ctx() context: Context
+  ): Promise<EventType | null> {
+    const event = await eventService.findById(id);
+    if (!event) {
+      return null;
+    }
+    context.attendeeCountByEventId = await attendeeService.countByEventIds([event.id]);
+    return event;
   }
 
   @Mutation(() => EventType)

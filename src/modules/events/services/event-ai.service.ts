@@ -1,8 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const GEMINI_MODEL = "gemini-flash-latest";
-const MAX_ATTEMPTS = 3;
-const RETRY_DELAY_MS = 1500;
+const MAX_ATTEMPTS = 2;
+const RETRY_DELAY_MS = 800;
 const RETRYABLE_STATUS_CODES = new Set([429, 503]);
 
 export interface GeneratedEventContent {
@@ -32,28 +32,21 @@ function sleep(ms: number): Promise<void> {
 
 function formatEventDate(isoDate: string): string {
   return new Intl.DateTimeFormat("en-IN", {
-    weekday: "long",
     day: "numeric",
-    month: "long",
+    month: "short",
     year: "numeric"
   }).format(new Date(isoDate));
 }
 
 function buildPrompt(context: EventAiContext): string {
-  return `You are writing marketing copy for a continuing medical education (CME) conference aimed at doctors and healthcare professionals.
+  return `Write concise CME conference copy for doctors.
 
-Event details:
-- Event name: ${context.name}
-- Date: ${formatEventDate(context.date)}
-- Speaker: ${context.speakerName}
-- Speaker designation: ${context.speakerDesignation}
+Event: ${context.name}
+Date: ${formatEventDate(context.date)}
+Speaker: ${context.speakerName}, ${context.speakerDesignation}
 
-Generate:
-1. eventDescription — 2-3 paragraphs about the medical event. Use a professional, authoritative tone suitable for doctors and CME audiences. Highlight clinical relevance, learning objectives, and why attendees should participate.
-2. speakerIntro — approximately 100 words introducing the speaker. Emphasize credentials, expertise, and relevance to the event topic.
-
-Respond with valid JSON only, no markdown fences, using exactly this shape:
-{"eventDescription":"...","speakerIntro":"..."}`;
+Return JSON only:
+{"eventDescription":"2 brief paragraphs","speakerIntro":"~50 words on credentials"}`;
 }
 
 export function parseGeneratedEventContent(raw: string): GeneratedEventContent {
@@ -107,18 +100,18 @@ function toUserFacingGeminiError(error: unknown): EventAiGenerationError {
 
   if (status === 503) {
     return new EventAiGenerationError(
-      "Gemini is temporarily busy. Please try again shortly or enter the content manually."
+      "AI is busy right now — type content manually or try again in a moment."
     );
   }
 
   if (status === 429) {
     return new EventAiGenerationError(
-      "Gemini rate limit reached. Please wait a moment and try again, or enter content manually."
+      "AI rate limit reached — type content manually or try again shortly."
     );
   }
 
   return new EventAiGenerationError(
-    "Unable to generate content right now. Please try again or enter the content manually."
+    "Could not generate content — type it manually or try again."
   );
 }
 
@@ -128,7 +121,14 @@ async function generateWithModel(
   context: EventAiContext
 ): Promise<GeneratedEventContent> {
   const client = new GoogleGenerativeAI(apiKey);
-  const model = client.getGenerativeModel({ model: modelName });
+  const model = client.getGenerativeModel({
+    model: modelName,
+    generationConfig: {
+      maxOutputTokens: 450,
+      temperature: 0.5,
+      responseMimeType: "application/json"
+    }
+  });
   const result = await model.generateContent(buildPrompt(context));
   const text = result.response.text()?.trim();
 
@@ -165,7 +165,7 @@ export async function generateEventContentWithGemini(
         break;
       }
 
-      await sleep(RETRY_DELAY_MS * (attempt + 1));
+      await sleep(RETRY_DELAY_MS);
     }
   }
 

@@ -11,6 +11,7 @@ import { getEnvConfig } from "./config/env.js";
 import { checkDatabaseConnection, connectMongo, disconnectMongo } from "./db/connection.js";
 import { AUTH_SESSION_COOKIE } from "./modules/auth/auth.constants.js";
 import { AuthResolver, resolveSessionUserFromCookie } from "./modules/auth/resolvers/auth.resolver.js";
+import { AttendeeResolver } from "./modules/attendees/resolvers/attendee.resolver.js";
 import { EventResolver } from "./modules/events/resolvers/event.resolver.js";
 import { registerUploadRoutes } from "./modules/uploads/routes/upload.routes.js";
 import type Context from "./types/context.type.js";
@@ -73,7 +74,7 @@ export function buildApp(): FastifyInstance {
   void registerUploadRoutes(app);
 
   const gqlSchema = buildSchemaSync({
-    resolvers: [AuthResolver, EventResolver],
+    resolvers: [AuthResolver, EventResolver, AttendeeResolver],
     validate: false
   });
 

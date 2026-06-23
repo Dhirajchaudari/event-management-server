@@ -1,4 +1,4 @@
-import { Field, ID, InputType, Int, ObjectType, registerEnumType } from "type-graphql";
+import { Field, ID, InputType, ObjectType, registerEnumType } from "type-graphql";
 
 import { EVENT_STATUSES, type EventStatus } from "../interfaces/event.types.js";
 
@@ -36,8 +36,7 @@ export class EventType {
   @Field(() => EventStatusEnum)
   public status!: EventStatus;
 
-  @Field(() => Int)
-  public attendeeCount!: number;
+  public attendeeCount?: number;
 
   @Field(() => String, { nullable: true })
   public aiDescription?: string;
@@ -71,9 +70,6 @@ export class CreateEventInput {
 
   @Field(() => String, { nullable: true })
   public speakerPhotoUrl?: string;
-
-  @Field(() => Int, { nullable: true })
-  public attendeeCount?: number;
 }
 
 @ObjectType()
@@ -101,9 +97,6 @@ export class UpdateEventInput {
 
   @Field(() => String, { nullable: true })
   public speakerPhotoUrl?: string;
-
-  @Field(() => Int, { nullable: true })
-  public attendeeCount?: number;
 
   @Field(() => String, { nullable: true })
   public aiDescription?: string;

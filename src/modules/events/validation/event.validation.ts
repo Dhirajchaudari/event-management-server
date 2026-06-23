@@ -7,7 +7,6 @@ export interface ValidatedCreateEventInput {
   speakerName: string;
   speakerDesignation: string;
   speakerPhotoUrl?: string;
-  attendeeCount?: number;
 }
 
 export interface ValidatedUpdateEventInput {
@@ -16,7 +15,6 @@ export interface ValidatedUpdateEventInput {
   speakerName?: string;
   speakerDesignation?: string;
   speakerPhotoUrl?: string;
-  attendeeCount?: number;
   aiDescription?: string;
   aiSpeakerIntro?: string;
 }
@@ -45,11 +43,6 @@ export function validateCreateInput(
     return { ok: false, message: speakerPhotoUrl.error };
   }
 
-  const attendeeCount = parseOptionalAttendeeCount(input.attendeeCount);
-  if (attendeeCount.error) {
-    return { ok: false, message: attendeeCount.error };
-  }
-
   return {
     ok: true,
     data: {
@@ -57,8 +50,7 @@ export function validateCreateInput(
       date: parsedDate.isoDate,
       speakerName: input.speakerName.trim(),
       speakerDesignation: input.speakerDesignation.trim(),
-      ...(speakerPhotoUrl.value !== undefined ? { speakerPhotoUrl: speakerPhotoUrl.value } : {}),
-      ...(attendeeCount.value !== undefined ? { attendeeCount: attendeeCount.value } : {})
+      ...(speakerPhotoUrl.value !== undefined ? { speakerPhotoUrl: speakerPhotoUrl.value } : {})
     }
   };
 }
@@ -84,14 +76,6 @@ export function validateUpdateInput(
       return { ok: false, message: speakerPhotoUrl.error };
     }
     data.speakerPhotoUrl = speakerPhotoUrl.value;
-  }
-
-  if (input.attendeeCount !== undefined) {
-    const attendeeCount = parseOptionalAttendeeCount(input.attendeeCount);
-    if (attendeeCount.error) {
-      return { ok: false, message: attendeeCount.error };
-    }
-    data.attendeeCount = attendeeCount.value;
   }
 
   if (input.aiDescription !== undefined) {
@@ -148,18 +132,6 @@ export function validateEventStatus(value: EventStatus): { ok: true; status: Eve
     return { ok: false, message: "Invalid event status" };
   }
   return { ok: true, status: value };
-}
-
-function parseOptionalAttendeeCount(
-  value: number | undefined
-): { value?: number; error?: string } {
-  if (value === undefined) {
-    return {};
-  }
-  if (!Number.isInteger(value) || value < 0) {
-    return { error: "attendeeCount must be a non-negative integer" };
-  }
-  return { value };
 }
 
 function parseEventDate(value: string): { ok: true; isoDate: string } | { ok: false; message: string } {
