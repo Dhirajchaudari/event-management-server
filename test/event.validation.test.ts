@@ -1,15 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { validateCreateInput, validateUpdateInput } from "../src/modules/events/event.validation.js";
+import { CreateEventInput, UpdateEventInput } from "../src/modules/events/inputs/event.inputs.js";
+import { validateCreateInput, validateUpdateInput } from "../src/modules/events/validation/event.validation.js";
 
 describe("validateCreateInput", () => {
   it("accepts valid event payload", () => {
-    const result = validateCreateInput({
-      name: "Advances in Fetal Medicine",
-      date: "15 August 2026",
-      speakerName: "Dr. Jane Smith",
-      speakerDesignation: "Senior Consultant, ABC Hospital"
-    });
+    const input = new CreateEventInput();
+    input.name = "Advances in Fetal Medicine";
+    input.date = "15 August 2026";
+    input.speakerName = "Dr. Jane Smith";
+    input.speakerDesignation = "Senior Consultant, ABC Hospital";
+
+    const result = validateCreateInput(input);
 
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -19,7 +21,13 @@ describe("validateCreateInput", () => {
   });
 
   it("rejects missing fields", () => {
-    const result = validateCreateInput({ name: "Only name" });
+    const input = new CreateEventInput();
+    input.name = "Only name";
+    input.date = "";
+    input.speakerName = "";
+    input.speakerDesignation = "";
+
+    const result = validateCreateInput(input);
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.message).toContain("required fields");
@@ -27,24 +35,27 @@ describe("validateCreateInput", () => {
   });
 
   it("rejects invalid date", () => {
-    const result = validateCreateInput({
-      name: "Test Event",
-      date: "not-a-date",
-      speakerName: "Speaker",
-      speakerDesignation: "Role"
-    });
+    const input = new CreateEventInput();
+    input.name = "Test Event";
+    input.date = "not-a-date";
+    input.speakerName = "Speaker";
+    input.speakerDesignation = "Role";
+
+    const result = validateCreateInput(input);
     expect(result.ok).toBe(false);
   });
 });
 
 describe("validateUpdateInput", () => {
   it("requires at least one field", () => {
-    const result = validateUpdateInput({});
+    const result = validateUpdateInput(new UpdateEventInput());
     expect(result.ok).toBe(false);
   });
 
   it("accepts partial updates", () => {
-    const result = validateUpdateInput({ name: "Updated name" });
+    const input = new UpdateEventInput();
+    input.name = "Updated name";
+    const result = validateUpdateInput(input);
     expect(result.ok).toBe(true);
   });
 });

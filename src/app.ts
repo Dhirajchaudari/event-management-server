@@ -1,9 +1,15 @@
-import Fastify, { type FastifyInstance } from "fastify";
+import "reflect-metadata";
+
+import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import cors from "@fastify/cors";
+import mercurius from "mercurius";
+import { buildSchemaSync } from "type-graphql";
 
 import { getEnvConfig } from "./config/env.js";
 import { checkDatabaseConnection, connectMongo, disconnectMongo } from "./db/connection.js";
-import { registerEventRoutes } from "./modules/events/event.routes.js";
+import { EventResolver } from "./modules/events/controllers/event.resolver.js";
+import { registerEventRoutes } from "./modules/events/routes/event.routes.js";
+import type Context from "./types/context.type.js";
 
 export function buildApp(): FastifyInstance {
   const env = getEnvConfig();
@@ -50,7 +56,22 @@ export function buildApp(): FastifyInstance {
     }
   });
 
-  void app.register(registerEventRoutes);
+  void registerEventRoutes(app);
+
+  const gqlSchema = buildSchemaSync({
+    resolvers: [EventResolver],
+    validate: false
+  });
+
+  void app.register(mercurius as any, {
+    schema: gqlSchema,
+    graphiql: env.nodeEnv !== "production",
+    path: "/graphql",
+    context: (request: FastifyRequest, reply: FastifyReply): Context => ({
+      request,
+      reply
+    })
+  });
 
   if (env.nodeEnv !== "test") {
     app.addHook("onReady", async () => {

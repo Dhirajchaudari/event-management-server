@@ -1,3 +1,5 @@
+import "reflect-metadata";
+
 import { buildApp } from "./app.js";
 import { getEnvConfig } from "./config/env.js";
 
