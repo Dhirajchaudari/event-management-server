@@ -3,6 +3,7 @@ import "reflect-metadata";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
+import multipart from "@fastify/multipart";
 import mercurius from "mercurius";
 import { buildSchemaSync } from "type-graphql";
 
@@ -11,6 +12,7 @@ import { checkDatabaseConnection, connectMongo, disconnectMongo } from "./db/con
 import { AUTH_SESSION_COOKIE } from "./modules/auth/auth.constants.js";
 import { AuthResolver, resolveSessionUserFromCookie } from "./modules/auth/resolvers/auth.resolver.js";
 import { EventResolver } from "./modules/events/resolvers/event.resolver.js";
+import { registerUploadRoutes } from "./modules/uploads/routes/upload.routes.js";
 import type Context from "./types/context.type.js";
 
 export function buildApp(): FastifyInstance {
@@ -60,6 +62,15 @@ export function buildApp(): FastifyInstance {
   });
 
   void app.register(cookie);
+
+  void app.register(multipart, {
+    limits: {
+      fileSize: 5 * 1024 * 1024,
+      files: 1
+    }
+  });
+
+  void registerUploadRoutes(app);
 
   const gqlSchema = buildSchemaSync({
     resolvers: [AuthResolver, EventResolver],

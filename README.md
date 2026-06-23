@@ -81,4 +81,5 @@ mutation {
 
 - Health: `https://api-events.orbitalops.net/health`
 - GraphQL: `https://api-events.orbitalops.net/graphql`
-- Add `PUBLIC_KEY` and `PRIVATE_KEY` to `SERVER_ENV_B64` and redeploy after updating secrets
+- Speaker photo upload: `POST /api/uploads/speaker-photo` (multipart `file`, auth cookie)
+- Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` in `.env.production`, regenerate `SERVER_ENV_B64`, and redeploy

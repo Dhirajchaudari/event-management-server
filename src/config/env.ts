@@ -29,6 +29,9 @@ export interface EnvConfig {
   jwtPublicKey: string;
   jwtPrivateKey: string;
   passwordMinLength: number;
+  cloudinaryCloudName?: string;
+  cloudinaryApiKey?: string;
+  cloudinaryApiSecret?: string;
 }
 
 let cachedConfig: EnvConfig | null = null;
@@ -82,7 +85,10 @@ export function getEnvConfig(): EnvConfig {
     corsOrigins: parseCorsOrigins(process.env.CORS_ORIGINS),
     jwtPublicKey: hasJwtKeys ? decodeBase64Key(getRequiredEnv("PUBLIC_KEY")) : "",
     jwtPrivateKey: hasJwtKeys ? decodeBase64Key(getRequiredEnv("PRIVATE_KEY")) : "",
-    passwordMinLength: Number(process.env.PASSWORD_MIN_LENGTH ?? "8")
+    passwordMinLength: Number(process.env.PASSWORD_MIN_LENGTH ?? "8"),
+    cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME,
+    cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
+    cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET
   };
 
   if (!isTest && !hasJwtKeys) {
