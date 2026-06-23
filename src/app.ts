@@ -8,7 +8,6 @@ import { buildSchemaSync } from "type-graphql";
 import { getEnvConfig } from "./config/env.js";
 import { checkDatabaseConnection, connectMongo, disconnectMongo } from "./db/connection.js";
 import { EventResolver } from "./modules/events/controllers/event.resolver.js";
-import { registerEventRoutes } from "./modules/events/routes/event.routes.js";
 import type Context from "./types/context.type.js";
 
 export function buildApp(): FastifyInstance {
@@ -55,8 +54,6 @@ export function buildApp(): FastifyInstance {
       callback(new Error("CORS_ORIGIN_NOT_ALLOWED"), false);
     }
   });
-
-  void registerEventRoutes(app);
 
   const gqlSchema = buildSchemaSync({
     resolvers: [EventResolver],
