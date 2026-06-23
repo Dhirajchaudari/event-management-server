@@ -12,13 +12,13 @@ import type { UserRole } from "../interfaces/auth.types.js";
 export class User {
   public _id!: Types.ObjectId;
 
-  @prop({ required: true, unique: true, trim: true, lowercase: true })
+  @prop({ required: true, unique: true, trim: true, lowercase: true, type: () => String })
   public email!: string;
 
-  @prop({ required: true })
+  @prop({ required: true, type: () => String })
   public passwordHash!: string;
 
-  @prop({ required: true, enum: ["admin", "user"], default: "user" })
+  @prop({ required: true, enum: ["admin", "user"], default: "user", type: () => String })
   public role!: UserRole;
 
   public createdAt?: Date;
