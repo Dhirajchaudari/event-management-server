@@ -1,6 +1,15 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-flash-latest", "gemini-1.5-flash"];
+// Prefer lite models first — they use a separate free-tier quota from flash/full models.
+const GEMINI_MODELS = [
+  "gemini-2.5-flash-lite",
+  "gemini-3.1-flash-lite",
+  "gemini-flash-lite-latest",
+  "gemini-2.0-flash-lite",
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+  "gemini-flash-latest"
+];
 const MAX_ATTEMPTS = 2;
 const RETRY_DELAY_MS = 800;
 const RETRYABLE_STATUS_CODES = new Set([429, 503]);
@@ -99,8 +108,9 @@ function extractStatusCode(error: unknown): number | null {
     return null;
   }
 
-  const match = error.message.match(/\[\s*(\d{3})\s+/);
-  return match ? Number(match[1]) : null;
+  const matches = [...error.message.matchAll(/\[\s*(\d{3})\s+[^\]]*\]/g)];
+  const last = matches.at(-1);
+  return last ? Number(last[1]) : null;
 }
 
 function isRetryableGeminiError(error: unknown): boolean {
@@ -108,13 +118,23 @@ function isRetryableGeminiError(error: unknown): boolean {
   return status !== null && RETRYABLE_STATUS_CODES.has(status);
 }
 
+function isModelUnavailableError(error: unknown): boolean {
+  const status = extractStatusCode(error);
+  return status === 404;
+}
 
-function toUserFacingGeminiError(error: unknown): EventAiGenerationError {
+function toUserFacingGeminiError(error: unknown, sawQuotaError: boolean): EventAiGenerationError {
   if (error instanceof EventAiGenerationError) {
     return error;
   }
 
   const status = extractStatusCode(error);
+
+  if (status === 429 || sawQuotaError) {
+    return new EventAiGenerationError(
+      "Gemini API quota exceeded. Wait a few minutes, check Google AI Studio billing, or type content manually."
+    );
+  }
 
   if (status === 503) {
     return new EventAiGenerationError(
@@ -122,9 +142,9 @@ function toUserFacingGeminiError(error: unknown): EventAiGenerationError {
     );
   }
 
-  if (status === 429) {
+  if (status === 401 || status === 403) {
     return new EventAiGenerationError(
-      "AI rate limit reached — type content manually or try again shortly."
+      "Gemini API key is invalid or unauthorized. Update GEMINI_API_KEY on the server."
     );
   }
 
@@ -168,6 +188,7 @@ export async function generateEventContentWithGemini(
   }
 
   let lastError: unknown;
+  let sawQuotaError = false;
 
   for (const modelName of GEMINI_MODELS) {
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
@@ -181,7 +202,15 @@ export async function generateEventContentWithGemini(
           throw error;
         }
 
+        if (extractStatusCode(error) === 429) {
+          sawQuotaError = true;
+        }
+
         lastError = error;
+
+        if (isModelUnavailableError(error)) {
+          break;
+        }
 
         const retryable =
           isRetryableGeminiError(error) ||
@@ -196,5 +225,5 @@ export async function generateEventContentWithGemini(
     }
   }
 
-  throw toUserFacingGeminiError(lastError);
+  throw toUserFacingGeminiError(lastError, sawQuotaError);
 }

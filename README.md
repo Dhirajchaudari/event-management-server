@@ -83,4 +83,4 @@ mutation {
 - GraphQL: `https://api-events.orbitalops.net/graphql`
 - Speaker photo upload: `POST /api/uploads/speaker-photo` (multipart `file`, auth cookie)
 - Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` in `.env.production`, regenerate `SERVER_ENV_B64`, and redeploy
-- Set `GEMINI_API_KEY` for AI event content generation (`generateEventContent` mutation, uses `gemini-flash-latest`)
+- Set `GEMINI_API_KEY` for AI event content generation (`generateEventContent` mutation; uses lite flash models first to avoid free-tier quota limits on full flash models). Get a key from [Google AI Studio](https://aistudio.google.com/apikey).
