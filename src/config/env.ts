@@ -33,6 +33,7 @@ export interface EnvConfig {
   cloudinaryApiKey?: string;
   cloudinaryApiSecret?: string;
   geminiApiKey?: string;
+  graphiqlEnabled: boolean;
 }
 
 let cachedConfig: EnvConfig | null = null;
@@ -90,7 +91,8 @@ export function getEnvConfig(): EnvConfig {
     cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME,
     cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
     cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET,
-    geminiApiKey: process.env.GEMINI_API_KEY
+    geminiApiKey: process.env.GEMINI_API_KEY,
+    graphiqlEnabled: process.env.GRAPHIQL_ENABLED !== "false"
   };
 
   if (!isTest && !hasJwtKeys) {

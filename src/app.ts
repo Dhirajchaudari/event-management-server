@@ -81,7 +81,7 @@ export function buildApp(): FastifyInstance {
 
   void app.register(mercurius as any, {
     schema: gqlSchema,
-    graphiql: env.nodeEnv !== "production",
+    graphiql: env.nodeEnv !== "test" && env.graphiqlEnabled,
     path: "/graphql",
     context: async (request: FastifyRequest, reply: FastifyReply): Promise<Context> => {
       const token = request.cookies[AUTH_SESSION_COOKIE];
