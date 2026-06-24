@@ -52,6 +52,16 @@ npm run dev
 
 GraphQL playground (non-production): http://localhost:8000/graphiql
 
+### Demo accounts (production)
+
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | `admin@orbitalops.net` | `EventAdmin@123` |
+| Organizer | `organizer.demo@orbitalops.net` | `Organizer@123` |
+| Attendee | `attendee.demo@orbitalops.net` | `Attendee@123` |
+
+`npm run seed:admin` creates the admin user locally. Organizer and attendee accounts were seeded on the production database for the live demo.
+
 ### Example auth + events
 
 ```graphql
