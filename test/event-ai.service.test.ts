@@ -27,6 +27,15 @@ describe("parseGeneratedEventContent", () => {
     expect(result.speakerIntro).toBe("Speaker copy");
   });
 
+  it("parses JSON embedded in prose", () => {
+    const result = parseGeneratedEventContent(
+      'Here is the copy:\n{"eventDescription":"Event copy","speakerIntro":"Speaker copy"}\nThanks.'
+    );
+
+    expect(result.eventDescription).toBe("Event copy");
+    expect(result.speakerIntro).toBe("Speaker copy");
+  });
+
   it("rejects invalid payloads", () => {
     expect(() => parseGeneratedEventContent("not-json")).toThrow(EventAiGenerationError);
     expect(() => parseGeneratedEventContent('{"eventDescription":""}')).toThrow(

@@ -333,16 +333,14 @@ export class EventService {
   ): Promise<EventType> {
     const eventId = new Types.ObjectId();
     const slug = await this.generateUniqueSlug(input.name, eventId.toString());
-    const role = sessionUser ? normalizeUserRole(sessionUser.role) : "organizer";
-    const status: EventStatus =
-      sessionUser && isAdminRole(sessionUser.role) ? "draft" : "pending_approval";
+    const status: EventStatus = "draft";
 
     const event = await EventModel.create({
       _id: eventId,
       name: input.name,
       slug,
       organizerId:
-        sessionUser && (isOrganizerRole(sessionUser.role) || role === "organizer")
+        sessionUser && isOrganizerRole(sessionUser.role)
           ? new Types.ObjectId(sessionUser.id)
           : undefined,
       date: new Date(input.date),

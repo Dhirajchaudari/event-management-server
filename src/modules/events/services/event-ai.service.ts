@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const GEMINI_MODEL = "gemini-flash-latest";
+const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-flash-latest", "gemini-1.5-flash"];
 const MAX_ATTEMPTS = 2;
 const RETRY_DELAY_MS = 800;
 const RETRYABLE_STATUS_CODES = new Set([429, 503]);
@@ -45,15 +45,28 @@ Event: ${context.name}
 Date: ${formatEventDate(context.date)}
 Speaker: ${context.speakerName}, ${context.speakerDesignation}
 
-Return JSON only:
-{"eventDescription":"2 brief paragraphs","speakerIntro":"~50 words on credentials"}`;
+Return JSON only with exactly these keys:
+{"eventDescription":"two short paragraphs","speakerIntro":"about 50 words on speaker credentials"}`;
+}
+
+export function extractJsonPayload(raw: string): string {
+  const trimmed = raw.trim();
+
+  if (trimmed.startsWith("```")) {
+    return trimmed.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  }
+
+  const start = trimmed.indexOf("{");
+  const end = trimmed.lastIndexOf("}");
+  if (start >= 0 && end > start) {
+    return trimmed.slice(start, end + 1);
+  }
+
+  return trimmed;
 }
 
 export function parseGeneratedEventContent(raw: string): GeneratedEventContent {
-  const trimmed = raw.trim();
-  const jsonText = trimmed.startsWith("```")
-    ? trimmed.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "")
-    : trimmed;
+  const jsonText = extractJsonPayload(raw);
 
   let parsed: unknown;
   try {
@@ -95,7 +108,12 @@ function isRetryableGeminiError(error: unknown): boolean {
   return status !== null && RETRYABLE_STATUS_CODES.has(status);
 }
 
+
 function toUserFacingGeminiError(error: unknown): EventAiGenerationError {
+  if (error instanceof EventAiGenerationError) {
+    return error;
+  }
+
   const status = extractStatusCode(error);
 
   if (status === 503) {
@@ -124,8 +142,8 @@ async function generateWithModel(
   const model = client.getGenerativeModel({
     model: modelName,
     generationConfig: {
-      maxOutputTokens: 450,
-      temperature: 0.5,
+      maxOutputTokens: 1024,
+      temperature: 0.4,
       responseMimeType: "application/json"
     }
   });
@@ -151,21 +169,30 @@ export async function generateEventContentWithGemini(
 
   let lastError: unknown;
 
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
-    try {
-      return await generateWithModel(apiKey, GEMINI_MODEL, context);
-    } catch (error) {
-      if (error instanceof EventAiGenerationError) {
-        throw error;
+  for (const modelName of GEMINI_MODELS) {
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+      try {
+        return await generateWithModel(apiKey, modelName, context);
+      } catch (error) {
+        if (
+          error instanceof EventAiGenerationError &&
+          error.message.includes("not configured")
+        ) {
+          throw error;
+        }
+
+        lastError = error;
+
+        const retryable =
+          isRetryableGeminiError(error) ||
+          (error instanceof EventAiGenerationError && attempt < MAX_ATTEMPTS - 1);
+
+        if (!retryable) {
+          break;
+        }
+
+        await sleep(RETRY_DELAY_MS);
       }
-
-      lastError = error;
-
-      if (!isRetryableGeminiError(error) || attempt === MAX_ATTEMPTS - 1) {
-        break;
-      }
-
-      await sleep(RETRY_DELAY_MS);
     }
   }
 
